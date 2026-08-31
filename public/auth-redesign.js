@@ -1,6 +1,6 @@
 (() => {
-  const mark = `<svg viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="spg" x1="8" y1="6" x2="31" y2="34" gradientUnits="userSpaceOnUse"><stop stop-color="#2f7df6"/><stop offset="1" stop-color="#7b3ff2"/></linearGradient></defs><path d="M25.9 4.8 13.2 12c-3.2 1.8-3.2 6.4 0 8.2l5.3 3.1 7.4-4.2-5.3-3.1 7.3-4.1c3.2-1.8 3.2-5.3-2-7.1Z" fill="url(#spg)"/><path d="m14.1 35.2 12.7-7.2c3.2-1.8 3.2-6.4 0-8.2l-5.3-3.1-7.4 4.2 5.3 3.1 7.3-4.1c-3.2-1.8-3.2-5.3 2-7.1Z" fill="url(#spg)"/></svg>`;
-  const google = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.6 12.23c0-.72-.06-1.25-.2-1.82H12v3.45h5.52a4.72 4.72 0 0 1-2.05 3.1v2.58h3.32c1.94-1.79 3.06-4.43 3.06-7.31Z"/><path fill="#34A853" d="M12 21.82c2.77 0 5.09-.91 6.79-2.47l-3.32-2.58c-.92.62-2.09 1-3.47 1-2.67 0-4.94-1.8-5.75-4.22H2.82v2.66A10.25 10.25 0 0 0 12 21.82Z"/><path fill="#FBBC05" d="M6.25 13.55A6.16 6.16 0 0 1 5.92 12c0-.54.12-1.06.33-1.55V7.79H2.82A10.24 10.24 0 0 0 1.73 12c0 1.65.4 3.2 1.09 4.58l3.43-3.03Z"/><path fill="#EA4335" d="M12 6.23c1.51 0 2.87.52 3.94 1.54l2.95-2.95C17.08 3.2 14.77 2.18 12 2.18a10.25 10.25 0 0 0-9.18 5.61l3.43 2.66C7.06 8.03 9.33 6.23 12 6.23Z"/></svg>`;
+  const mark = `<svg viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="spg" x1="8" y1="6" x2="31" y2="34" gradientUnits="userSpaceOnUse"><stop stop-color="#2f7df6"/><stop offset="1" stop-color="#7b3ff2"/></linearGradient></defs><path d="M25.9 4.8 13.2 12c-3.2 1.8-3.2 6.4 0 8.2l5.3 3.1 7.4-4.2-5.3-3.1 7.3-4.1c3.2-1.8 3.2-5.3-2-7.1Z" fill="url(#spg)"/><path d="m14.1 35.2 12.7-7.2c3.2-1.8 3.2-6.4 0-8.2l-5.3-3.1-7.4 4.2 5.3 3.1 7.3-4.1c3.2-1.8 3.2-5.3 2-7.1Z" fill="url(#spg)"/></svg>`;
+  const google = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.6 12.23c0-.72-.06-1.25-.2-1.82H12v3.45h5.52a4.72 4.72 0 0 1-2.05 3.1v2.58h3.32c1.94-1.79 3.06-4.43 3.06-7.31Z"/><path fill="#34A853" d="M12 21.82c2.77 0 5.09-.91 6.79-2.47l-3.32-2.58c-.92.62-2.09 1-3.47-1-2.67 0-4.94-1.8-5.75-4.22H2.82v2.66A10.24 10.24 0 0 0 12 21.82Z"/><path fill="#FBBC05" d="M6.25 13.55A6.16 6.16 0 0 1 5.92 12c0-.54.12-1.06.33-1.55V7.79H2.82A10.24 10.24 0 0 0 1.73 12c0 1.65.4 3.2 1.09 4.58l3.43-3.03Z"/><path fill="#EA4335" d="M12 6.23c1.51 0 2.87.52 3.94 1.54l2.95-2.95C17.08 3.2 14.77 2.18 12 2.18a10.25 10.25 0 0 0-9.18 5.61l3.43 2.66C7.06 8.03 9.33 6.23 12 6.23Z"/></svg>`;
   const css = `
     html:has(.auth-layout),body:has(.auth-layout),#root:has(.auth-layout){height:auto!important;min-height:100%!important;overflow:auto!important}
     .auth-layout{min-height:100vh!important;max-width:1240px!important;grid-template-columns:minmax(0,1fr) 500px!important;gap:72px!important;padding:34px 40px!important;background:transparent!important}
@@ -22,7 +22,7 @@
     .auth-card .muted{color:#68758a!important}
     .auth-card .auth-google{width:100%;height:43px;margin-top:12px;border:1px solid #dfe3ea;background:#fff;border-radius:9px;display:flex;align-items:center;justify-content:center;gap:9px;font-size:13px;font-weight:600;color:#252b36;cursor:not-allowed}
     .auth-google svg{width:18px;height:18px}.auth-divider{display:flex;align-items:center;gap:12px;color:#8b93a1;font-size:10px;margin:17px 0 0}.auth-divider:before,.auth-divider:after{content:"";height:1px;background:#e7e9ed;flex:1}
-    .auth-legal{font-size:9px!important;color:#7b8492!important;text-align:center;line-height:1.5;margin:15px 0 0!important}.auth-legal a{color:#356fe5;text-decoration:none}
+    .auth-legal{font-size:9px!important;color:#7b8492!important;text-align:center;line-height:1.5;margin:15px 0 0!important}.auth-legal a{color:#356fe5;text-decoration:none;cursor:pointer!important;pointer-events:auto!important}.auth-legal a:hover{text-decoration:underline}
     @media(max-width:900px){.auth-layout{grid-template-columns:1fr!important;gap:30px!important;padding:30px!important}.auth-brand h1{font-size:48px!important;margin-top:55px!important}.auth-card{max-width:520px;margin:auto}.auth-features{max-width:100%}}
     @media(max-width:650px){.auth-layout{padding:22px!important}.auth-brand h1{font-size:40px!important}.auth-features{grid-template-columns:1fr}.auth-feature{border-right:0;border-bottom:1px solid #e5e8ee;padding:12px 0}.auth-feature:last-child{border-bottom:0}.auth-security{margin-bottom:8px}}
   `;
@@ -42,7 +42,12 @@
         const divider=document.createElement('div');divider.className='auth-divider';divider.textContent='OR';form.appendChild(divider);
         const googleBtn=document.createElement('button');googleBtn.type='button';googleBtn.className='auth-google';googleBtn.innerHTML=`${google}<span>Continue with Google</span>`;googleBtn.title='Google authentication will be enabled later';form.appendChild(googleBtn);
       }
-      if(!form.querySelector('.auth-legal')){const legal=document.createElement('p');legal.className='auth-legal';legal.innerHTML='By creating an account, you agree to our <a href="#" onclick="return false">Terms of Service</a> and <a href="#" onclick="return false">Privacy Policy</a>.';form.appendChild(legal)}
+      if(!form.querySelector('.auth-legal')){
+        const legal=document.createElement('p');
+        legal.className='auth-legal';
+        legal.innerHTML='By creating an account, you agree to our <a href="/terms.html">Terms of Service</a> and <a href="/privacy.html">Privacy Policy</a>.';
+        form.appendChild(legal);
+      }
     }
     document.documentElement.style.overflow='auto';document.body.style.overflow='auto';
   }
