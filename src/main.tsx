@@ -1,15 +1,18 @@
-import React,{useEffect,useState}from'react';
-import{createRoot}from'react-dom/client';
-import{createClient,type User}from'@supabase/supabase-js';
-import{
+import React, { useEffect, useMemo, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import { createClient, type User } from '@supabase/supabase-js';
+import {
+  ArrowLeft,
   ArrowRight,
   Check,
   ChevronRight,
   CircleHelp,
+  Copy,
   Folder,
   LayoutDashboard,
   LogOut,
   Plug,
+  Printer,
   Settings,
   ShoppingCart,
   SlidersHorizontal,
@@ -19,686 +22,508 @@ import{
   Trash2,
   Power,
   Search,
-  RefreshCw
-}from'lucide-react';
-import'./styles.css';
+  RefreshCw,
+  Split,
+  Package,
+  Pencil,
+  Save,
+  X,
+  Clock3
+} from 'lucide-react';
+import './styles.css';
 
-const url=import.meta.env.VITE_SUPABASE_URL as string|undefined;
-const key=import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string|undefined;
+const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
 
-const sb=url&&key?createClient(url,key):null;
+const sb = url && key ? createClient(url, key) : null;
 
-type WS={
-  id:string;
-  name:string;
-  onboarding_completed:boolean;
+type WS = {
+  id: string;
+  name: string;
+  onboarding_completed: boolean;
 };
 
-type F={
-  id:string;
-  name:string;
-  position:number;
+type F = {
+  id: string;
+  name: string;
+  position: number;
 };
 
-type Sub={
-  plan_id:string;
-  status:string;
-  trial_ends_at:string|null;
+type Sub = {
+  plan_id: string;
+  status: string;
+  trial_ends_at: string | null;
 };
 
-type Rule={
-  id:string;
-  name:string;
-  description:string|null;
-  enabled:boolean;
-  priority:number;
-  trigger_type:string;
-  conditions:any[];
-  actions:any[];
+type Rule = {
+  id: string;
+  name: string;
+  description: string | null;
+  enabled: boolean;
+  priority: number;
+  trigger_type: string;
+  conditions: any[];
+  actions: any[];
 };
 
-type Order={
-  id:string;
-  order_number:string|null;
-  customer_first_name:string|null;
-  customer_last_name:string|null;
-  customer_email?:string|null;
+type Order = {
+  id: string;
+  order_number: string | null;
 
-  total_amount:number|null;
-  subtotal_amount?:number|null;
-  tax_amount?:number|null;
-  shipping_amount?:number|null;
-  handling_amount?:number|null;
-  discount_amount?:number|null;
+  customer_first_name: string | null;
+  customer_last_name: string | null;
+  customer_email: string | null;
 
-  currency:string|null;
-  quantity:number|null;
+  shipping_method: string | null;
+  payment_method: string | null;
+  payment_ip_address: string | null;
 
-  financial_status:string|null;
-  fulfillment_status:string|null;
+  financial_status: string | null;
+  fulfillment_status: string | null;
 
-  shipping_method?:string|null;
-  payment_method?:string|null;
-  payment_ip_address?:string|null;
+  shipping_address: any;
+  billing_address: any;
 
-  shipping_address?:any;
-  billing_address?:any;
+  total_amount: number | null;
+  currency: string | null;
+  quantity: number | null;
 
-  folder_id:string|null;
-  ordered_at:string|null;
+  subtotal_amount: number | null;
+  tax_amount: number | null;
+  shipping_amount: number | null;
+  handling_amount: number | null;
+  discount_amount: number | null;
 
-  [key:string]:any;
+  folder_id: string | null;
+  ordered_at: string | null;
+
+  items?: any;
 };
 
+type OrderItem = {
+  id: string;
+  order_id?: string;
+  product_title: string;
+  product_sku: string;
+  quantity: number;
+  product_type: 'Fragile' | 'Non-fragile' | string;
+  price: number;
+};
 
-/* =========================================================
-   APP
-========================================================= */
+type OrderUpdate = {
+  id: string;
+  message: string;
+  created_at: string;
+};
 
-function App(){
+function App() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [ws, setWs] = useState<WS | null>(null);
+  const [folders, setFolders] = useState<F[]>([]);
+  const [sub, setSub] = useState<Sub | null>(null);
 
-  const[user,setUser]=useState<User|null>(null);
-  const[loading,setLoading]=useState(true);
-  const[ws,setWs]=useState<WS|null>(null);
-  const[folders,setFolders]=useState<F[]>([]);
-  const[sub,setSub]=useState<Sub|null>(null);
-
-  useEffect(()=>{
-
-    if(!sb){
+  useEffect(() => {
+    if (!sb) {
       setLoading(false);
       return;
     }
 
-    sb.auth.getSession().then(({data})=>{
-      setUser(data.session?.user??null);
+    sb.auth.getSession().then(({ data }) => {
+      setUser(data.session?.user ?? null);
     });
 
-    const{
-      data:{subscription}
-    }=sb.auth.onAuthStateChange((_,session)=>{
-      setUser(session?.user??null);
+    const {
+      data: { subscription }
+    } = sb.auth.onAuthStateChange((_, session) => {
+      setUser(session?.user ?? null);
     });
 
-    return()=>subscription.unsubscribe();
+    return () => subscription.unsubscribe();
+  }, []);
 
-  },[]);
-
-
-  useEffect(()=>{
-
-    if(!user||!sb){
+  useEffect(() => {
+    if (!user || !sb) {
       setLoading(false);
       return;
     }
 
-    load(user.id).finally(()=>{
-      setLoading(false);
-    });
+    load(user.id).finally(() => setLoading(false));
+  }, [user?.id]);
 
-  },[user?.id]);
+  async function load(uid: string) {
+    if (!sb) return;
 
-
-  async function load(uid:string){
-
-    if(!sb)return;
-
-    const{data:m}=await sb
+    const { data: m } = await sb
       .from('workspace_members')
       .select('workspace_id')
-      .eq('user_id',uid)
+      .eq('user_id', uid)
       .limit(1);
 
-    const id=m?.[0]?.workspace_id;
+    const id = m?.[0]?.workspace_id;
 
-    if(!id){
+    if (!id) {
       setWs(null);
       return;
     }
 
-    const[
-      {data:w},
-      {data:f},
-      {data:s}
-    ]=await Promise.all([
-
+    const [{ data: w }, { data: f }, { data: s }] = await Promise.all([
       sb
         .from('workspaces')
         .select('id,name,onboarding_completed')
-        .eq('id',id)
+        .eq('id', id)
         .single(),
 
       sb
         .from('folders')
         .select('id,name,position')
-        .eq('workspace_id',id)
+        .eq('workspace_id', id)
         .order('position'),
 
       sb
         .from('subscriptions')
         .select('plan_id,status,trial_ends_at')
-        .eq('workspace_id',id)
+        .eq('workspace_id', id)
         .single()
-
     ]);
 
     setWs(w as WS);
-    setFolders((f??[])as F[]);
+    setFolders((f ?? []) as F[]);
     setSub(s as Sub);
   }
 
+  if (!sb) return <Config />;
 
-  if(!sb)return <Config/>;
+  if (loading) return <Loading />;
 
-  if(loading)return <Loading/>;
+  if (!user) return <Auth />;
 
-  if(!user)return <Auth/>;
-
-  if(!ws||!ws.onboarding_completed){
-
-    return(
-      <Onboard
-        user={user}
-        done={()=>load(user.id)}
-      />
-    );
-
+  if (!ws || !ws.onboarding_completed) {
+    return <Onboard user={user} done={() => load(user.id)} />;
   }
 
-  return(
+  return (
     <Dashboard
       user={user}
       ws={ws}
       folders={folders}
       sub={sub}
-      refresh={()=>load(user.id)}
+      refresh={() => load(user.id)}
     />
   );
 }
 
-
-/* =========================================================
-   CONFIG / LOADING
-========================================================= */
-
-const Config=()=>(
+const Config = () => (
   <Center>
     <div className="auth-card">
-
       <div className="logo">S</div>
-
       <h1>Backend configuration needed</h1>
-
       <p>
         Add <code>VITE_SUPABASE_URL</code> and{' '}
-        <code>VITE_SUPABASE_PUBLISHABLE_KEY</code>{' '}
-        to your environment.
+        <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> to your environment.
       </p>
-
     </div>
   </Center>
 );
 
-
-const Loading=()=>(
+const Loading = () => (
   <Center>
-    <div className="spinner"/>
+    <div className="spinner" />
   </Center>
 );
 
-
-const Center=({
-  children
-}:{
-  children:React.ReactNode
-})=>(
-  <div className="center-screen">
-    {children}
-  </div>
+const Center = ({ children }: { children: React.ReactNode }) => (
+  <div className="center-screen">{children}</div>
 );
 
+function Auth() {
+  const [mode, setMode] = useState<'signup' | 'signin'>('signup');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [pass, setPass] = useState('');
+  const [err, setErr] = useState('');
+  const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState(false);
 
-/* =========================================================
-   AUTH
-========================================================= */
-
-function Auth(){
-
-  const[mode,setMode]=useState<'signup'|'signin'>('signup');
-  const[name,setName]=useState('');
-  const[email,setEmail]=useState('');
-  const[pass,setPass]=useState('');
-  const[err,setErr]=useState('');
-  const[msg,setMsg]=useState('');
-  const[busy,setBusy]=useState(false);
-
-
-  async function submit(e:React.FormEvent){
-
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
 
-    if(!sb)return;
+    if (!sb) return;
 
     setBusy(true);
     setErr('');
     setMsg('');
 
-    const r=mode==='signup'
-      ?await sb.auth.signUp({
-          email,
-          password:pass,
-          options:{
-            data:{
-              full_name:name.trim()
+    const r =
+      mode === 'signup'
+        ? await sb.auth.signUp({
+            email,
+            password: pass,
+            options: {
+              data: {
+                full_name: name.trim()
+              }
             }
-          }
-        })
-      :await sb.auth.signInWithPassword({
-          email,
-          password:pass
-        });
+          })
+        : await sb.auth.signInWithPassword({
+            email,
+            password: pass
+          });
 
-
-    if(r.error){
-
+    if (r.error) {
       setErr(r.error.message);
-
-    }else if(
-      mode==='signup'&&
-      !r.data.session
-    ){
-
-      setMsg(
-        'Check your email to confirm your account.'
-      );
-
+    } else if (mode === 'signup' && !r.data.session) {
+      setMsg('Check your email to confirm your account.');
     }
 
     setBusy(false);
   }
 
-
-  return(
+  return (
     <div className="auth-layout">
-
       <div className="auth-brand">
-
-        <div className="logo large">
-          S
-        </div>
-
-        <h1>
-          Automate your order operations.
-        </h1>
-
+        <div className="logo large">S</div>
+        <h1>Automate your order operations.</h1>
         <p>
-          Route orders, build rules, and keep
-          fulfillment moving without repetitive
-          manual work.
+          Route orders, build rules, and keep fulfillment moving without
+          repetitive manual work.
         </p>
-
       </div>
 
-
       <div className="auth-card wide">
-
         <div className="auth-tabs">
-
           <button
-            className={mode==='signup'?'selected':''}
-            onClick={()=>setMode('signup')}
+            className={mode === 'signup' ? 'selected' : ''}
+            onClick={() => setMode('signup')}
           >
             Create account
           </button>
 
           <button
-            className={mode==='signin'?'selected':''}
-            onClick={()=>setMode('signin')}
+            className={mode === 'signin' ? 'selected' : ''}
+            onClick={() => setMode('signin')}
           >
             Sign in
           </button>
-
         </div>
 
-
         <h2>
-          {mode==='signup'
-            ?'Start your free trial'
-            :'Welcome back'}
+          {mode === 'signup' ? 'Start your free trial' : 'Welcome back'}
         </h2>
 
-
         <p className="muted">
-          {mode==='signup'
-            ?'Create your workspace in a few steps.'
-            :'Sign in to your automation workspace.'}
+          {mode === 'signup'
+            ? 'Create your workspace in a few steps.'
+            : 'Sign in to your automation workspace.'}
         </p>
 
-
         <form onSubmit={submit}>
-
-          {mode==='signup'&&(
-
+          {mode === 'signup' && (
             <label>
               Your name
-
               <input
                 value={name}
-                onChange={e=>setName(e.target.value)}
+                onChange={(e) => setName(e.target.value)}
                 required
                 placeholder="Your full name"
               />
-
             </label>
-
           )}
-
 
           <label>
             Email
-
             <input
               type="email"
               value={email}
-              onChange={e=>setEmail(e.target.value)}
+              onChange={(e) => setEmail(e.target.value)}
               required
               placeholder="you@company.com"
             />
-
           </label>
-
 
           <label>
             Password
-
             <input
               type="password"
               value={pass}
-              onChange={e=>setPass(e.target.value)}
+              onChange={(e) => setPass(e.target.value)}
               required
               minLength={6}
               placeholder="At least 6 characters"
             />
-
           </label>
 
+          {err && <div className="alert error">{err}</div>}
+          {msg && <div className="alert success">{msg}</div>}
 
-          {err&&(
-            <div className="alert error">
-              {err}
-            </div>
-          )}
-
-
-          {msg&&(
-            <div className="alert success">
-              {msg}
-            </div>
-          )}
-
-
-          <button
-            className="primary full"
-            disabled={busy}
-          >
+          <button className="primary full" disabled={busy}>
             {busy
-              ?'Please wait…'
-              :mode==='signup'
-                ?'Create account'
-                :'Sign in'}
+              ? 'Please wait…'
+              : mode === 'signup'
+                ? 'Create account'
+                : 'Sign in'}
 
-            <ArrowRight size={16}/>
+            <ArrowRight size={16} />
           </button>
-
         </form>
-
       </div>
-
     </div>
   );
 }
 
-
-/* =========================================================
-   ONBOARDING
-========================================================= */
-
 function Onboard({
   user,
   done
-}:{
-  user:User;
-  done:()=>Promise<void>
-}){
-
-  const[step,setStep]=useState(1);
-  const[name,setName]=useState(
-    String(user.user_metadata?.full_name??'')
+}: {
+  user: User;
+  done: () => Promise<void>;
+}) {
+  const [step, setStep] = useState(1);
+  const [name, setName] = useState(
+    String(user.user_metadata?.full_name ?? '')
   );
-  const[store,setStore]=useState('');
-  const[busy,setBusy]=useState(false);
-  const[err,setErr]=useState('');
+  const [store, setStore] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
 
-
-  async function finish(){
-
-    if(!sb)return;
+  async function finish() {
+    if (!sb) return;
 
     setBusy(true);
     setErr('');
 
-    const p=await sb
-      .from('profiles')
-      .upsert({
-        id:user.id,
-        full_name:name.trim()
-      });
+    const p = await sb.from('profiles').upsert({
+      id: user.id,
+      full_name: name.trim()
+    });
 
-
-    if(p.error){
-
+    if (p.error) {
       setErr(p.error.message);
       setBusy(false);
       return;
     }
 
+    const r = await sb.rpc('create_workspace_with_defaults', {
+      p_name: store.trim()
+    });
 
-    const r=await sb.rpc(
-      'create_workspace_with_defaults',
-      {
-        p_name:store.trim()
-      }
-    );
-
-
-    if(r.error){
-
+    if (r.error) {
       setErr(r.error.message);
       setBusy(false);
       return;
     }
 
-
-    const u=await sb
+    const u = await sb
       .from('workspaces')
       .update({
-        onboarding_completed:true
+        onboarding_completed: true
       })
-      .eq('id',r.data);
+      .eq('id', r.data);
 
-
-    if(u.error){
-
+    if (u.error) {
       setErr(u.error.message);
       setBusy(false);
       return;
     }
 
-
     setBusy(false);
-
     await done();
   }
 
-
-  return(
+  return (
     <div className="onboarding">
-
       <div className="onboard-top">
-
         <div className="brand">
-
-          <span className="logo">
-            S
-          </span>
-
-          <strong>
-            Sprintiverse
-          </strong>
-
+          <span className="logo">S</span>
+          <strong>Sprintiverse</strong>
         </div>
 
-        <span>
-          Step {step} of 2
-        </span>
-
+        <span>Step {step} of 2</span>
       </div>
 
-
       <div className="onboard-card">
-
-        {step===1?(
-
+        {step === 1 ? (
           <>
-
             <div className="step-icon">
-              <Sparkles size={20}/>
+              <Sparkles size={20} />
             </div>
 
-            <h1>
-              Set up your workspace
-            </h1>
+            <h1>Set up your workspace</h1>
 
             <p className="muted">
-              Tell us who you are and which
-              store this workspace belongs to.
+              Tell us who you are and which store this workspace belongs to.
             </p>
-
 
             <label>
               Your name
-
               <input
                 value={name}
-                onChange={e=>setName(e.target.value)}
+                onChange={(e) => setName(e.target.value)}
                 required
               />
-
             </label>
-
 
             <label>
               Store / business name
-
               <input
                 value={store}
-                onChange={e=>setStore(e.target.value)}
+                onChange={(e) => setStore(e.target.value)}
                 required
                 placeholder="Acme Store"
               />
-
             </label>
-
 
             <label>
               Email
-
-              <input
-                value={user.email??''}
-                disabled
-              />
-
+              <input value={user.email ?? ''} disabled />
             </label>
-
 
             <button
               className="primary full"
-              disabled={!name.trim()||!store.trim()}
-              onClick={()=>setStep(2)}
+              disabled={!name.trim() || !store.trim()}
+              onClick={() => setStep(2)}
             >
               Continue
-
-              <ChevronRight size={16}/>
+              <ChevronRight size={16} />
             </button>
-
           </>
-
-        ):(
-          
+        ) : (
           <>
-
             <div className="step-icon">
-              <Plug size={20}/>
+              <Plug size={20} />
             </div>
 
-            <h1>
-              Connect your store
-            </h1>
+            <h1>Connect your store</h1>
 
             <p className="muted">
-              Shopify will be connected after
-              the core SaaS is complete. Your
+              Shopify will be connected after the core SaaS is complete. Your
               workspace can be created now.
             </p>
 
-
             <div className="integration-placeholder">
-
-              <div className="shopify-placeholder">
-                S
-              </div>
+              <div className="shopify-placeholder">S</div>
 
               <div>
-                <strong>
-                  Shopify
-                </strong>
-
-                <span>
-                  Store integration
-                </span>
+                <strong>Shopify</strong>
+                <span>Store integration</span>
               </div>
 
-              <span className="coming">
-                Coming next
-              </span>
-
+              <span className="coming">Coming next</span>
             </div>
-
 
             <div className="setup-note">
-
-              <Check size={17}/>
-
+              <Check size={17} />
               <span>
-                Your 1-day free trial starts
-                when setup finishes.
+                Your 1-day free trial starts when setup finishes.
               </span>
-
             </div>
 
-
-            {err&&(
-              <div className="alert error">
-                {err}
-              </div>
-            )}
-
+            {err && <div className="alert error">{err}</div>}
 
             <div className="button-row">
-
               <button
                 className="secondary"
-                onClick={()=>setStep(1)}
+                onClick={() => setStep(1)}
               >
                 Back
               </button>
@@ -708,29 +533,16 @@ function Onboard({
                 disabled={busy}
                 onClick={finish}
               >
-                {busy
-                  ?'Setting up…'
-                  :'Finish setup'}
-
-                <ArrowRight size={16}/>
+                {busy ? 'Setting up…' : 'Finish setup'}
+                <ArrowRight size={16} />
               </button>
-
             </div>
-
           </>
-
         )}
-
       </div>
-
     </div>
   );
 }
-
-
-/* =========================================================
-   DASHBOARD
-========================================================= */
 
 function Dashboard({
   user,
@@ -738,282 +550,212 @@ function Dashboard({
   folders,
   sub,
   refresh
-}:{
-  user:User;
-  ws:WS;
-  folders:F[];
-  sub:Sub|null;
-  refresh:()=>Promise<void>
-}){
+}: {
+  user: User;
+  ws: WS;
+  folders: F[];
+  sub: Sub | null;
+  refresh: () => Promise<void>;
+}) {
+  const [page, setPage] = useState('overview');
+  const [upgrade, setUpgrade] = useState(false);
+  const [search, setSearch] = useState('');
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
-  const[page,setPage]=useState('overview');
-  const[upgrade,setUpgrade]=useState(false);
-  const[search,setSearch]=useState('');
-
-
-  const days=sub?.trial_ends_at
-    ?Math.max(
-      0,
-      Math.ceil(
-        (
-          new Date(sub.trial_ends_at).getTime()-
-          Date.now()
-        )/86400000
+  const days = sub?.trial_ends_at
+    ? Math.max(
+        0,
+        Math.ceil(
+          (new Date(sub.trial_ends_at).getTime() - Date.now()) /
+            86400000
+        )
       )
-    )
-    :0;
+    : 0;
 
-
-  async function out(){
+  async function out() {
     await sb?.auth.signOut();
   }
 
-
-  const nav=[
-    ['overview','Overview',LayoutDashboard],
-    ['orders','Orders',ShoppingCart],
-    ['folders','Folders',Folder],
-    ['rules','Rule builder',SlidersHorizontal],
-    ['integrations','Integrations',Plug]
+  const nav = [
+    ['overview', 'Overview', LayoutDashboard],
+    ['orders', 'Orders', ShoppingCart],
+    ['folders', 'Folders', Folder],
+    ['rules', 'Rule builder', SlidersHorizontal],
+    ['integrations', 'Integrations', Plug]
   ] as const;
 
+  function goToOrder(id: string) {
+    setSelectedOrderId(id);
+    setPage('order-detail');
+  }
 
-  return(
+  function goToOrders() {
+    setSelectedOrderId(null);
+    setPage('orders');
+  }
+
+  return (
     <div className="app">
-
       <aside className="sidebar">
-
         <div className="brand">
-
-          <span className="logo">
-            S
-          </span>
-
-          <strong>
-            Sprintiverse
-          </strong>
-
+          <span className="logo">S</span>
+          <strong>Sprintiverse</strong>
         </div>
-
 
         <div className="workspace-chip">
-
-          <span>
-            {ws.name[0]?.toUpperCase()}
-          </span>
+          <span>{ws.name[0]?.toUpperCase()}</span>
 
           <div>
-
-            <strong>
-              {ws.name}
-            </strong>
-
-            <small>
-              Workspace
-            </small>
-
+            <strong>{ws.name}</strong>
+            <small>Workspace</small>
           </div>
-
         </div>
 
-
         <nav>
-
-          {nav.map(([id,label,I])=>(
-
+          {nav.map(([id, label, I]) => (
             <button
-              className={page===id?'active':''}
-              onClick={()=>{
+              className={page === id ? 'active' : ''}
+              onClick={() => {
                 setPage(id);
                 setUpgrade(false);
+                setSelectedOrderId(null);
               }}
               key={id}
             >
-              <I size={17}/>
+              <I size={17} />
               {label}
             </button>
-
           ))}
-
         </nav>
 
-
         <div className="sidebar-bottom">
-
           <button
-            onClick={()=>setPage('settings')}
+            onClick={() => {
+              setPage('settings');
+              setSelectedOrderId(null);
+            }}
           >
-            <Settings size={17}/>
+            <Settings size={17} />
             Settings
           </button>
 
-
           <button
-            onClick={()=>setPage('billing')}
+            onClick={() => {
+              setPage('billing');
+              setSelectedOrderId(null);
+            }}
           >
-            <Zap size={17}/>
+            <Zap size={17} />
             Billing
           </button>
 
-
           <button onClick={out}>
-            <LogOut size={17}/>
+            <LogOut size={17} />
             Sign out
           </button>
-
         </div>
-
       </aside>
 
-
       <main className="main">
-
         <div className="topbar">
-
           <div className="search">
-
-            <Search size={16}/>
+            <Search size={16} />
 
             <input
               value={search}
-              onChange={e=>setSearch(e.target.value)}
+              onChange={(e) => setSearch(e.target.value)}
               placeholder="Search order ID"
             />
-
           </div>
 
-
-          {days>0&&(
-
+          {days > 0 && (
             <div className="trial-banner">
-
               <span>
-                Your {days} day free trial
-                is expiring soon
+                Your {days} day free trial is expiring soon
               </span>
 
-              <button
-                onClick={()=>setUpgrade(true)}
-              >
+              <button onClick={() => setUpgrade(true)}>
                 Upgrade your plan
               </button>
-
             </div>
-
           )}
 
-
           <div className="user-avatar">
-
-            {(user.user_metadata?.full_name??
-              user.email??
+            {(user.user_metadata?.full_name ??
+              user.email ??
               'U')[0].toUpperCase()}
-
           </div>
-
         </div>
 
-
-        {upgrade?
-
-          <Billing
-            close={()=>setUpgrade(false)}
-          />
-
-        :page==='billing'?
-
-          <Billing/>
-
-        :page==='folders'?
-
+        {upgrade ? (
+          <Billing close={() => setUpgrade(false)} />
+        ) : page === 'billing' ? (
+          <Billing />
+        ) : page === 'folders' ? (
           <Folders
             folders={folders}
             workspaceId={ws.id}
             refresh={refresh}
           />
-
-        :page==='integrations'?
-
-          <Integrations/>
-
-        :page==='rules'?
-
+        ) : page === 'integrations' ? (
+          <Integrations />
+        ) : page === 'rules' ? (
           <Rules
             workspaceId={ws.id}
             folders={folders}
           />
-
-        :page==='orders'?
-
+        ) : page === 'orders' ? (
           <Orders
             workspaceId={ws.id}
             search={search}
+            openOrder={goToOrder}
           />
-
-        :
-
+        ) : page === 'order-detail' && selectedOrderId ? (
+          <OrderDetail
+            orderId={selectedOrderId}
+            workspaceId={ws.id}
+            folders={folders}
+            back={goToOrders}
+          />
+        ) : (
           <Overview
             ws={ws}
             folders={folders}
             sub={sub}
           />
-
-        }
-
+        )}
       </main>
-
     </div>
   );
 }
-
-
-/* =========================================================
-   OVERVIEW
-========================================================= */
 
 function Overview({
   ws,
   folders,
   sub
-}:{
-  ws:WS;
-  folders:F[];
-  sub:Sub|null
-}){
-
-  return(
+}: {
+  ws: WS;
+  folders: F[];
+  sub: Sub | null;
+}) {
+  return (
     <div className="content">
-
       <header>
-
         <div>
-
-          <p className="eyebrow">
-            WORKSPACE
-          </p>
-
-          <h1>
-            {ws.name}
-          </h1>
-
+          <p className="eyebrow">WORKSPACE</p>
+          <h1>{ws.name}</h1>
           <p className="muted">
-            Automate your order operations
-            from one place.
+            Automate your order operations from one place.
           </p>
-
         </div>
-
 
         <button className="primary">
           Create rule
-          <ArrowRight size={15}/>
+          <ArrowRight size={15} />
         </button>
-
       </header>
 
-
       <section className="stats">
-
         <div className="card">
           <span>Orders today</span>
           <strong>0</strong>
@@ -1036,237 +778,152 @@ function Overview({
           <span>Folders</span>
           <strong>{folders.length}</strong>
           <small>
-            {sub?.plan_id==='trial'
-              ?'Free trial'
-              :'Active plan'}
+            {sub?.plan_id === 'trial'
+              ? 'Free trial'
+              : 'Active plan'}
           </small>
         </div>
-
       </section>
 
-
       <div className="grid">
-
         <div className="panel">
-
           <div className="panel-head">
-
             <div>
-
-              <h2>
-                Automation activity
-              </h2>
-
+              <h2>Automation activity</h2>
               <p className="muted">
-                Recent automation runs will
-                appear here.
+                Recent automation runs will appear here.
               </p>
-
             </div>
 
-            <span className="status">
-              Ready
-            </span>
-
+            <span className="status">Ready</span>
           </div>
-
 
           <div className="empty">
-
             <div className="empty-icon">
-              <Zap size={18}/>
+              <Zap size={18} />
             </div>
 
-            <h3>
-              No automation activity yet
-            </h3>
+            <h3>No automation activity yet</h3>
 
             <p>
-              Connect a store and create a
-              rule to start automating.
+              Connect a store and create a rule to start
+              automating.
             </p>
-
           </div>
-
         </div>
 
-
         <div className="panel">
-
           <div className="panel-head">
-
             <div>
-
-              <h2>
-                Folders
-              </h2>
-
+              <h2>Folders</h2>
               <p className="muted">
                 Your default order workflow.
               </p>
-
             </div>
-
           </div>
-
 
           <div className="folder-list">
-
-            {folders.map(f=>(
-
+            {folders.map((f) => (
               <div key={f.id}>
-
-                <Folder size={15}/>
-
-                <span>
-                  {f.name}
-                </span>
-
-                <ChevronRight size={14}/>
-
+                <Folder size={15} />
+                <span>{f.name}</span>
+                <ChevronRight size={14} />
               </div>
-
             ))}
-
           </div>
-
         </div>
-
       </div>
-
     </div>
   );
 }
-
-
-/* =========================================================
-   FOLDERS
-========================================================= */
 
 function Folders({
   folders,
   workspaceId,
   refresh
-}:{
-  folders:F[];
-  workspaceId:string;
-  refresh:()=>Promise<void>
-}){
+}: {
+  folders: F[];
+  workspaceId: string;
+  refresh: () => Promise<void>;
+}) {
+  const [n, setN] = useState('');
 
-  const[n,setN]=useState('');
+  async function add() {
+    if (!sb || !n.trim()) return;
 
-
-  async function add(){
-
-    if(!sb||!n.trim())return;
-
-    await sb
-      .from('folders')
-      .insert({
-        workspace_id:workspaceId,
-        name:n.trim(),
-        position:(folders.at(-1)?.position??0)+10
-      });
+    await sb.from('folders').insert({
+      workspace_id: workspaceId,
+      name: n.trim(),
+      position: (folders.at(-1)?.position ?? 0) + 10
+    });
 
     setN('');
-
     await refresh();
   }
 
+  async function del(id: string) {
+    if (!sb) return;
 
-  async function del(id:string){
-
-    if(!sb)return;
-
-    const count=await sb
+    const count = await sb
       .from('orders')
-      .select('id',{
-        count:'exact',
-        head:true
+      .select('id', {
+        count: 'exact',
+        head: true
       })
-      .eq('folder_id',id);
+      .eq('folder_id', id);
 
+    if ((count.count ?? 0) > 0) {
+      const target =
+        folders.find((f) => f.name === 'New') ??
+        folders.find((f) => f.id !== id);
 
-    if((count.count??0)>0){
-
-      const target=
-        folders.find(f=>f.name==='New')??
-        folders.find(f=>f.id!==id);
-
-      if(target){
-
+      if (target) {
         await sb
           .from('orders')
           .update({
-            folder_id:target.id
+            folder_id: target.id
           })
-          .eq('folder_id',id);
-
+          .eq('folder_id', id);
       }
-
     }
 
-
-    await sb
-      .from('folders')
-      .delete()
-      .eq('id',id);
+    await sb.from('folders').delete().eq('id', id);
 
     await refresh();
   }
 
+  async function rename(f: F) {
+    const x = window.prompt('Rename folder', f.name);
 
-  async function rename(f:F){
-
-    const x=window.prompt(
-      'Rename folder',
-      f.name
-    );
-
-    if(!sb||!x?.trim())return;
+    if (!sb || !x?.trim()) return;
 
     await sb
       .from('folders')
       .update({
-        name:x.trim()
+        name: x.trim()
       })
-      .eq('id',f.id);
+      .eq('id', f.id);
 
     await refresh();
   }
 
-
-  return(
+  return (
     <div className="content">
-
       <header>
-
         <div>
-
-          <p className="eyebrow">
-            WORKFLOW
-          </p>
-
-          <h1>
-            Folders
-          </h1>
-
+          <p className="eyebrow">WORKFLOW</p>
+          <h1>Folders</h1>
           <p className="muted">
             Add, rename or delete order folders.
           </p>
-
         </div>
-
       </header>
 
-
       <div className="panel folder-panel">
-
         <div className="add-row">
-
           <input
             value={n}
-            onChange={e=>setN(e.target.value)}
+            onChange={(e) => setN(e.target.value)}
             placeholder="New folder name"
           />
 
@@ -1275,1780 +932,1559 @@ function Folders({
             disabled={!n.trim()}
             onClick={add}
           >
-            <Plus size={15}/>
+            <Plus size={15} />
             Add folder
           </button>
-
         </div>
 
-
-        {folders.map(f=>(
-
-          <div
-            className="folder-row"
-            key={f.id}
-          >
-
+        {folders.map((f) => (
+          <div className="folder-row" key={f.id}>
             <div>
-
-              <Folder size={17}/>
-
-              <strong>
-                {f.name}
-              </strong>
-
+              <Folder size={17} />
+              <strong>{f.name}</strong>
             </div>
 
-
             <div className="row-actions">
-
-              <button
-                onClick={()=>rename(f)}
-              >
+              <button onClick={() => rename(f)}>
                 Rename
               </button>
 
               <button
                 className="danger"
-                onClick={()=>del(f.id)}
+                onClick={() => del(f.id)}
               >
-                <Trash2 size={13}/>
+                <Trash2 size={13} />
                 Delete
               </button>
-
             </div>
-
           </div>
-
         ))}
-
       </div>
-
     </div>
   );
 }
 
-
-/* =========================================================
-   ORDERS
-   NEW COMPLETE ORDER DETAIL INTERFACE
-========================================================= */
-
 function Orders({
   workspaceId,
-  search
-}:{
-  workspaceId:string;
-  search:string
-}){
+  search,
+  openOrder
+}: {
+  workspaceId: string;
+  search: string;
+  openOrder: (id: string) => void;
+}) {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const[orders,setOrders]=useState<Order[]>([]);
-  const[selected,setSelected]=useState<Order|null>(null);
-  const[items,setItems]=useState<any[]>([]);
-  const[events,setEvents]=useState<any[]>([]);
-  const[loading,setLoading]=useState(true);
-  const[saving,setSaving]=useState(false);
-  const[editing,setEditing]=useState(false);
-
-  const[
-    shippingAddress,
-    setShippingAddress
-  ]=useState('');
-
-  const[
-    billingAddress,
-    setBillingAddress
-  ]=useState('');
-
-
-  /* -----------------------------------------
-     LOAD ORDERS
-  ----------------------------------------- */
-
-  async function load(){
-
-    if(!sb)return;
+  async function load() {
+    if (!sb) return;
 
     setLoading(true);
 
-    let q=sb
+    let q = sb
       .from('orders')
       .select('*')
-      .eq('workspace_id',workspaceId)
-      .order('ordered_at',{
-        ascending:false
+      .eq('workspace_id', workspaceId)
+      .order('ordered_at', {
+        ascending: false
       })
       .limit(100);
 
-
-    if(search.trim()){
-
-      q=q.ilike(
+    if (search.trim()) {
+      q = q.ilike(
         'order_number',
         `%${search.trim()}%`
       );
-
     }
 
+    const { data, error } = await q;
 
-    const{
-      data,
-      error
-    }=await q;
-
-
-    if(error){
-
+    if (error) {
       console.error(error);
       setOrders([]);
-
-    }else{
-
-      setOrders((data??[])as Order[]);
-
+    } else {
+      setOrders((data ?? []) as Order[]);
     }
-
 
     setLoading(false);
   }
 
-
-  /* -----------------------------------------
-     OPEN ORDER
-  ----------------------------------------- */
-
-  async function openOrder(order:Order){
-
-    if(!sb)return;
-
-    setSelected(order);
-    setEditing(false);
-
-
-    setShippingAddress(
-      JSON.stringify(
-        order.shipping_address??{},
-        null,
-        2
-      )
-    );
-
-
-    setBillingAddress(
-      JSON.stringify(
-        order.billing_address??{},
-        null,
-        2
-      )
-    );
-
-
-    const[
-      {data:itemData},
-      {data:eventData}
-    ]=await Promise.all([
-
-      sb
-        .from('order_items')
-        .select('*')
-        .eq('order_id',order.id),
-
-      sb
-        .from('order_events')
-        .select('*')
-        .eq('order_id',order.id)
-        .order('created_at',{
-          ascending:false
-        })
-
-    ]);
-
-
-    setItems(itemData??[]);
-    setEvents(eventData??[]);
-  }
-
-
-  /* -----------------------------------------
-     CLOSE ORDER
-  ----------------------------------------- */
-
-  function closeOrder(){
-
-    setSelected(null);
-    setEditing(false);
-    setItems([]);
-    setEvents([]);
-
-  }
-
-
-  /* -----------------------------------------
-     SAVE ORDER
-  ----------------------------------------- */
-
-  async function saveOrder(){
-
-    if(!sb||!selected)return;
-
-    setSaving(true);
-
-
-    let shipping:any={};
-    let billing:any={};
-
-
-    try{
-
-      shipping=JSON.parse(
-        shippingAddress||'{}'
-      );
-
-      billing=JSON.parse(
-        billingAddress||'{}'
-      );
-
-    }catch{
-
-      alert(
-        'Shipping and billing address must contain valid JSON.'
-      );
-
-      setSaving(false);
-      return;
-    }
-
-
-    const{
-      error
-    }=await sb
-      .from('orders')
-      .update({
-
-        customer_first_name:
-          selected.customer_first_name,
-
-        customer_last_name:
-          selected.customer_last_name,
-
-        customer_email:
-          selected.customer_email,
-
-        shipping_method:
-          selected.shipping_method,
-
-        payment_method:
-          selected.payment_method,
-
-        payment_ip_address:
-          selected.payment_ip_address||null,
-
-        shipping_address:
-          shipping,
-
-        billing_address:
-          billing,
-
-        financial_status:
-          selected.financial_status,
-
-        fulfillment_status:
-          selected.fulfillment_status,
-
-        subtotal_amount:
-          selected.subtotal_amount,
-
-        tax_amount:
-          selected.tax_amount,
-
-        shipping_amount:
-          selected.shipping_amount,
-
-        handling_amount:
-          selected.handling_amount,
-
-        discount_amount:
-          selected.discount_amount,
-
-        total_amount:
-          selected.total_amount
-
-      })
-      .eq('id',selected.id);
-
-
-    if(error){
-
-      alert(error.message);
-
-    }else{
-
-      setEditing(false);
-
-      await load();
-
-      await openOrder(selected);
-
-    }
-
-
-    setSaving(false);
-  }
-
-
-  /* -----------------------------------------
-     UPDATE FIELD
-  ----------------------------------------- */
-
-  function updateField(
-    field:string,
-    value:any
-  ){
-
-    setSelected(current=>
-      current
-        ?{
-            ...current,
-            [field]:value
-          }
-        :current
-    );
-
-  }
-
-
-  /* -----------------------------------------
-     MONEY
-  ----------------------------------------- */
-
-  function money(
-    value:any,
-    currency:any
-  ){
-
-    return `${
-      currency??'$'
-    } ${
-      Number(value??0).toFixed(2)
-    }`;
-
-  }
-
-
-  /* -----------------------------------------
-     ITEM HELPERS
-  ----------------------------------------- */
-
-  function itemTitle(item:any){
-
-    return(
-      item.product_title??
-      item.title??
-      item.name??
-      'Unnamed product'
-    );
-
-  }
-
-
-  function itemSku(item:any){
-
-    return(
-      item.sku??
-      item.product_sku??
-      '—'
-    );
-
-  }
-
-
-  function itemQty(item:any){
-
-    return(
-      item.quantity??
-      item.qty??
-      0
-    );
-
-  }
-
-
-  function itemPrice(item:any){
-
-    return(
-      item.unit_price??
-      item.price??
-      0
-    );
-
-  }
-
-
-  /* -----------------------------------------
-     EVENT HELPERS
-  ----------------------------------------- */
-
-  function eventText(event:any){
-
-    return(
-      event.message??
-      event.description??
-      event.event_type??
-      event.type??
-      'Order updated'
-    );
-
-  }
-
-
-  function eventTime(value:any){
-
-    if(!value)return'—';
-
-    return new Date(value).toLocaleString(
-      [],
-      {
-        day:'2-digit',
-        month:'short',
-        hour:'2-digit',
-        minute:'2-digit'
-      }
-    );
-
-  }
-
-
-  useEffect(()=>{
-
+  useEffect(() => {
     load();
+  }, [workspaceId, search]);
 
-  },[workspaceId,search]);
-
-
-  /* =====================================================
-     ORDER DETAIL
-  ===================================================== */
-
-  if(selected){
-
-    return(
-      <div className="content order-detail-page">
-
-        <header>
-
-          <div>
-
-            <p className="eyebrow">
-              ORDER MANAGEMENT
-            </p>
-
-            <h1>
-              {selected.order_number??
-                selected.id.slice(0,8)}
-            </h1>
-
-            <p className="muted">
-              Complete order information and
-              order history.
-            </p>
-
-          </div>
-
-
-          <div className="button-row">
-
-            <button
-              className="secondary"
-              onClick={closeOrder}
-            >
-              Back to orders
-            </button>
-
-
-            <button
-              className="secondary"
-              onClick={()=>window.print()}
-            >
-              Print receipt
-            </button>
-
-          </div>
-
-        </header>
-
-
-        {/* ACTION BUTTONS */}
-
-        <div className="panel order-actions-panel">
-
-          <button
-            className="primary"
-            onClick={()=>setEditing(!editing)}
-          >
-            {editing
-              ?'Cancel editing'
-              :'Edit order'}
-          </button>
-
-
-          <button
-            className="secondary"
-            onClick={()=>{
-              alert(
-                'Split Order interface will be connected next.'
-              );
-            }}
-          >
-            Split Order
-          </button>
-
-
-          <button
-            className="secondary"
-            onClick={()=>{
-              alert(
-                'Duplicate Order will be connected next.'
-              );
-            }}
-          >
-            Duplicate Order
-          </button>
-
-
-          <button
-            className="secondary"
-            onClick={()=>{
-              alert(
-                'Add Order will be connected next.'
-              );
-            }}
-          >
-            Add Order
-          </button>
-
-
-          <button
-            className="secondary"
-            onClick={()=>{
-              alert(
-                'Delete Items will be connected next.'
-              );
-            }}
-          >
-            Delete Items
-          </button>
-
-
-          <button
-            className="secondary"
-            onClick={()=>{
-              alert(
-                'Duplicate Items will be connected next.'
-              );
-            }}
-          >
-            Duplicate Items
-          </button>
-
-
-          <button
-            className="secondary"
-            onClick={()=>{
-              alert(
-                'Add Items will be connected next.'
-              );
-            }}
-          >
-            Add Items
-          </button>
-
-
-          {editing&&(
-
-            <button
-              className="primary"
-              disabled={saving}
-              onClick={saveOrder}
-            >
-              {saving
-                ?'Saving…'
-                :'Save changes'}
-            </button>
-
-          )}
-
-        </div>
-
-
-        {/* MAIN ORDER INFORMATION */}
-
-        <div className="order-detail-grid">
-
-
-          {/* ORDER DETAILS */}
-
-          <div className="panel">
-
-            <div className="panel-head">
-
-              <div>
-
-                <h2>
-                  Order details
-                </h2>
-
-                <p className="muted">
-                  Customer, payment and delivery
-                  information.
-                </p>
-
-              </div>
-
-            </div>
-
-
-            <div className="order-fields">
-
-
-              <label>
-
-                Order number
-
-                <input
-                  value={
-                    selected.order_number??''
-                  }
-                  disabled
-                />
-
-              </label>
-
-
-              <label>
-
-                Customer email
-
-                <input
-                  value={
-                    selected.customer_email??''
-                  }
-                  disabled={!editing}
-                  onChange={e=>
-                    updateField(
-                      'customer_email',
-                      e.target.value
-                    )
-                  }
-                />
-
-              </label>
-
-
-              <label>
-
-                First name
-
-                <input
-                  value={
-                    selected.customer_first_name??''
-                  }
-                  disabled={!editing}
-                  onChange={e=>
-                    updateField(
-                      'customer_first_name',
-                      e.target.value
-                    )
-                  }
-                />
-
-              </label>
-
-
-              <label>
-
-                Last name
-
-                <input
-                  value={
-                    selected.customer_last_name??''
-                  }
-                  disabled={!editing}
-                  onChange={e=>
-                    updateField(
-                      'customer_last_name',
-                      e.target.value
-                    )
-                  }
-                />
-
-              </label>
-
-
-              <label>
-
-                Shipping method
-
-                <input
-                  value={
-                    selected.shipping_method??''
-                  }
-                  disabled={!editing}
-                  onChange={e=>
-                    updateField(
-                      'shipping_method',
-                      e.target.value
-                    )
-                  }
-                />
-
-              </label>
-
-
-              <label>
-
-                Payment method
-
-                <input
-                  value={
-                    selected.payment_method??''
-                  }
-                  disabled={!editing}
-                  onChange={e=>
-                    updateField(
-                      'payment_method',
-                      e.target.value
-                    )
-                  }
-                />
-
-              </label>
-
-
-              <label>
-
-                Payment IP address
-
-                <input
-                  value={
-                    selected.payment_ip_address??''
-                  }
-                  disabled={!editing}
-                  onChange={e=>
-                    updateField(
-                      'payment_ip_address',
-                      e.target.value
-                    )
-                  }
-                />
-
-              </label>
-
-
-              <label>
-
-                Payment status
-
-                <input
-                  value={
-                    selected.financial_status??''
-                  }
-                  disabled={!editing}
-                  onChange={e=>
-                    updateField(
-                      'financial_status',
-                      e.target.value
-                    )
-                  }
-                />
-
-              </label>
-
-
-              <label>
-
-                Fulfillment status
-
-                <input
-                  value={
-                    selected.fulfillment_status??''
-                  }
-                  disabled={!editing}
-                  onChange={e=>
-                    updateField(
-                      'fulfillment_status',
-                      e.target.value
-                    )
-                  }
-                />
-
-              </label>
-
-
-            </div>
-
-
-            {/* ADDRESSES */}
-
-            <div className="address-grid">
-
-
-              <label>
-
-                Shipping address
-
-                <textarea
-                  value={shippingAddress}
-                  disabled={!editing}
-                  onChange={e=>
-                    setShippingAddress(
-                      e.target.value
-                    )
-                  }
-                  rows={8}
-                />
-
-              </label>
-
-
-              <label>
-
-                Billing address
-
-                <textarea
-                  value={billingAddress}
-                  disabled={!editing}
-                  onChange={e=>
-                    setBillingAddress(
-                      e.target.value
-                    )
-                  }
-                  rows={8}
-                />
-
-              </label>
-
-
-            </div>
-
-          </div>
-
-
-          {/* ORDER SUMMARY */}
-
-          <div className="panel">
-
-            <div className="panel-head">
-
-              <div>
-
-                <h2>
-                  Order summary
-                </h2>
-
-                <p className="muted">
-                  Financial summary for this
-                  order.
-                </p>
-
-              </div>
-
-            </div>
-
-
-            <div className="order-summary">
-
-
-              <div>
-
-                <span>
-                  Subtotal
-                </span>
-
-                <strong>
-                  {money(
-                    selected.subtotal_amount,
-                    selected.currency
-                  )}
-                </strong>
-
-              </div>
-
-
-              <div>
-
-                <span>
-                  Taxes
-                </span>
-
-                <strong>
-                  {money(
-                    selected.tax_amount,
-                    selected.currency
-                  )}
-                </strong>
-
-              </div>
-
-
-              <div>
-
-                <span>
-                  Shipping
-                </span>
-
-                <strong>
-                  {money(
-                    selected.shipping_amount,
-                    selected.currency
-                  )}
-                </strong>
-
-              </div>
-
-
-              <div>
-
-                <span>
-                  Handling
-                </span>
-
-                <strong>
-                  {money(
-                    selected.handling_amount,
-                    selected.currency
-                  )}
-                </strong>
-
-              </div>
-
-
-              <div>
-
-                <span>
-                  Discounts
-                </span>
-
-                <strong>
-                  {money(
-                    selected.discount_amount,
-                    selected.currency
-                  )}
-                </strong>
-
-              </div>
-
-
-              <div className="grand-total">
-
-                <span>
-                  Grand Total
-                </span>
-
-                <strong>
-                  {money(
-                    selected.total_amount,
-                    selected.currency
-                  )}
-                </strong>
-
-              </div>
-
-
-            </div>
-
-          </div>
-
-        </div>
-
-
-        {/* ORDER ITEMS */}
-
-        <div className="panel">
-
-          <div className="panel-head">
-
-            <div>
-
-              <h2>
-                Order items
-              </h2>
-
-              <p className="muted">
-                Products included in this order.
-              </p>
-
-            </div>
-
-          </div>
-
-
-          {items.length===0?(
-
-            <div className="empty compact">
-
-              <div className="empty-icon">
-                <ShoppingCart size={18}/>
-              </div>
-
-              <h3>
-                No items found
-              </h3>
-
-              <p>
-                This order currently has
-                no order items.
-              </p>
-
-            </div>
-
-          ):(
-
-            <div className="table-wrap">
-
-              <table>
-
-                <thead>
-
-                  <tr>
-
-                    <th>
-                      Order Item ID
-                    </th>
-
-                    <th>
-                      Product
-                    </th>
-
-                    <th>
-                      SKU
-                    </th>
-
-                    <th>
-                      Qty
-                    </th>
-
-                    <th>
-                      Type
-                    </th>
-
-                    <th>
-                      Price
-                    </th>
-
-                  </tr>
-
-                </thead>
-
-
-                <tbody>
-
-                  {items.map((item:any)=>(
-
-                    <tr key={item.id}>
-
-                      <td>
-
-                        <code>
-                          {String(
-                            item.id
-                          ).slice(0,12)}
-                        </code>
-
-                      </td>
-
-
-                      <td>
-
-                        <strong>
-                          {itemTitle(item)}
-                        </strong>
-
-                      </td>
-
-
-                      <td>
-                        {itemSku(item)}
-                      </td>
-
-
-                      <td>
-                        {itemQty(item)}
-                      </td>
-
-
-                      <td>
-
-                        <span className="pill">
-
-                          {String(
-                            item.product_type??
-                            'non_fragile'
-                          ).replace(
-                            '_',
-                            ' '
-                          )}
-
-                        </span>
-
-                      </td>
-
-
-                      <td>
-
-                        {money(
-                          itemPrice(item),
-                          selected.currency
-                        )}
-
-                      </td>
-
-                    </tr>
-
-                  ))}
-
-                </tbody>
-
-              </table>
-
-            </div>
-
-          )}
-
-        </div>
-
-
-        {/* ORDER UPDATES */}
-
-        <div className="panel order-timeline">
-
-          <div className="panel-head">
-
-            <div>
-
-              <h2>
-                Order updates
-              </h2>
-
-              <p className="muted">
-                Activity and changes for
-                this order.
-              </p>
-
-            </div>
-
-          </div>
-
-
-          <div className="timeline">
-
-
-            <div className="timeline-item">
-
-              <div className="timeline-dot"/>
-
-              <div>
-
-                <strong>
-                  Order imported
-                </strong>
-
-                <span>
-                  {eventTime(
-                    selected.ordered_at
-                  )}
-                </span>
-
-              </div>
-
-            </div>
-
-
-            {events.map(
-              (event:any,index:number)=>(
-
-                <div
-                  className="timeline-item"
-                  key={
-                    event.id??index
-                  }
-                >
-
-                  <div className="timeline-dot"/>
-
-                  <div>
-
-                    <strong>
-                      {eventText(event)}
-                    </strong>
-
-                    <span>
-                      {eventTime(
-                        event.created_at
-                      )}
-                    </span>
-
-                  </div>
-
-                </div>
-
-              )
-            )}
-
-          </div>
-
-        </div>
-
-
-        {/* PRINT RECEIPT AREA */}
-
-        <div className="print-receipt">
-
-          <div>
-
-            <p className="eyebrow">
-              RECEIPT
-            </p>
-
-            <h2>
-              {selected.order_number??
-                'Order'}
-            </h2>
-
-            <p>
-              {selected.customer_email??'—'}
-            </p>
-
-          </div>
-
-
-          <div>
-
-            <strong>
-              {money(
-                selected.total_amount,
-                selected.currency
-              )}
-            </strong>
-
-          </div>
-
-        </div>
-
-      </div>
-    );
-  }
-
-
-  /* =====================================================
-     ORDERS LIST
-  ===================================================== */
-
-  return(
+  return (
     <div className="content">
-
       <header>
-
         <div>
-
-          <p className="eyebrow">
-            ORDER MANAGEMENT
-          </p>
-
-          <h1>
-            Orders
-          </h1>
-
+          <p className="eyebrow">ORDER MANAGEMENT</p>
+          <h1>Orders</h1>
           <p className="muted">
-            Orders will arrive here from
-            connected stores.
+            Orders will arrive here from connected stores.
           </p>
-
         </div>
-
 
         <button
           className="secondary"
           onClick={load}
         >
-          <RefreshCw size={14}/>
+          <RefreshCw size={14} />
           Refresh
         </button>
-
       </header>
 
-
       <div className="panel table-panel">
-
-
-        {loading?(
-
+        {loading ? (
           <div className="empty compact">
-
-            <div className="spinner"/>
-
+            <div className="spinner" />
           </div>
-
-        ):orders.length===0?(
-
+        ) : orders.length === 0 ? (
           <div className="empty compact">
-
             <div className="empty-icon">
-              <ShoppingCart size={18}/>
+              <ShoppingCart size={18} />
             </div>
 
             <h3>
-
               {search
-                ?`No order found for “${search}”`
-                :'No orders yet'}
-
+                ? `No order found for “${search}”`
+                : 'No orders yet'}
             </h3>
 
             <p>
-              Connect a store to start
-              importing orders.
+              Connect a store or create a test order to
+              start importing orders.
             </p>
-
           </div>
-
-        ):(
-
+        ) : (
           <div className="table-wrap">
-
             <table>
-
               <thead>
-
                 <tr>
-
-                  <th>
-                    Order
-                  </th>
-
-                  <th>
-                    Customer
-                  </th>
-
-                  <th>
-                    Total
-                  </th>
-
-                  <th>
-                    Qty
-                  </th>
-
-                  <th>
-                    Payment
-                  </th>
-
-                  <th>
-                    Fulfillment
-                  </th>
-
+                  <th>Order</th>
+                  <th>Customer</th>
+                  <th>Total</th>
+                  <th>Qty</th>
+                  <th>Payment</th>
+                  <th>Fulfillment</th>
                 </tr>
-
               </thead>
 
-
               <tbody>
+                {orders.map((o) => (
+                  <tr
+                    key={o.id}
+                    className="clickable-row"
+                    onClick={() => openOrder(o.id)}
+                  >
+                    <td>
+                      <strong>
+                        {o.order_number ??
+                          o.id.slice(0, 8)}
+                      </strong>
+                    </td>
 
-                {orders.map(
-                  (o:Order)=>(
+                    <td>
+                      {[
+                        o.customer_first_name,
+                        o.customer_last_name
+                      ]
+                        .filter(Boolean)
+                        .join(' ') || '—'}
+                    </td>
 
-                    <tr key={o.id}>
+                    <td>
+                      {o.currency ?? '$'}{' '}
+                      {Number(
+                        o.total_amount ?? 0
+                      ).toFixed(2)}
+                    </td>
 
-                      <td>
+                    <td>{o.quantity ?? 0}</td>
 
-                        <button
-                          className="order-link"
-                          onClick={()=>
-                            openOrder(o)
-                          }
-                        >
+                    <td>
+                      <span className="pill">
+                        {o.financial_status ?? '—'}
+                      </span>
+                    </td>
 
-                          {o.order_number??
-                            o.id.slice(0,8)}
-
-                        </button>
-
-                      </td>
-
-
-                      <td>
-
-                        {[
-                          o.customer_first_name,
-                          o.customer_last_name
-                        ]
-                          .filter(Boolean)
-                          .join(' ')||'—'}
-
-                      </td>
-
-
-                      <td>
-
-                        {money(
-                          o.total_amount,
-                          o.currency
-                        )}
-
-                      </td>
-
-
-                      <td>
-                        {o.quantity??0}
-                      </td>
-
-
-                      <td>
-
-                        <span className="pill">
-                          {o.financial_status??'—'}
-                        </span>
-
-                      </td>
-
-
-                      <td>
-                        {o.fulfillment_status??
-                          'Unfulfilled'}
-                      </td>
-
-                    </tr>
-
-                  )
-                )}
-
+                    <td>
+                      {o.fulfillment_status ??
+                        'Unfulfilled'}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
-
             </table>
-
           </div>
-
         )}
-
       </div>
-
     </div>
   );
 }
 
+/* -------------------------------------------------------------------------- */
+/* ORDER DETAIL                                                               */
+/* -------------------------------------------------------------------------- */
 
-/* =========================================================
-   RULE BUILDER
-========================================================= */
+function OrderDetail({
+  orderId,
+  workspaceId,
+  folders,
+  back
+}: {
+  orderId: string;
+  workspaceId: string;
+  folders: F[];
+  back: () => void;
+}) {
+  const [order, setOrder] = useState<Order | null>(null);
+  const [items, setItems] = useState<OrderItem[]>([]);
+  const [updates, setUpdates] = useState<OrderUpdate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const [form, setForm] = useState({
+    order_number: '',
+    customer_email: '',
+    customer_first_name: '',
+    customer_last_name: '',
+    shipping_method: '',
+    payment_method: '',
+    payment_ip_address: '',
+    financial_status: '',
+    fulfillment_status: '',
+    shipping_address: '',
+    billing_address: ''
+  });
+
+  useEffect(() => {
+    loadOrder();
+  }, [orderId, workspaceId]);
+
+  async function loadOrder() {
+    if (!sb) return;
+
+    setLoading(true);
+
+    const { data, error } = await sb
+      .from('orders')
+      .select('*')
+      .eq('id', orderId)
+      .eq('workspace_id', workspaceId)
+      .single();
+
+    if (error || !data) {
+      console.error(error);
+      setOrder(null);
+      setLoading(false);
+      return;
+    }
+
+    const current = data as Order;
+
+    setOrder(current);
+
+    setForm({
+      order_number: current.order_number ?? '',
+      customer_email: current.customer_email ?? '',
+      customer_first_name:
+        current.customer_first_name ?? '',
+      customer_last_name:
+        current.customer_last_name ?? '',
+      shipping_method:
+        current.shipping_method ?? '',
+      payment_method:
+        current.payment_method ?? '',
+      payment_ip_address:
+        current.payment_ip_address ?? '',
+      financial_status:
+        current.financial_status ?? '',
+      fulfillment_status:
+        current.fulfillment_status ?? '',
+      shipping_address: formatAddress(
+        current.shipping_address
+      ),
+      billing_address: formatAddress(
+        current.billing_address
+      )
+    });
+
+    setItems(extractOrderItems(current));
+
+    setUpdates([
+      {
+        id: 'imported',
+        message: 'Order was imported',
+        created_at:
+          current.ordered_at ??
+          new Date().toISOString()
+      }
+    ]);
+
+    setLoading(false);
+  }
+
+  function updateField(
+    field: keyof typeof form,
+    value: string
+  ) {
+    setForm((current) => ({
+      ...current,
+      [field]: value
+    }));
+  }
+
+  async function saveOrder() {
+    if (!sb || !order) return;
+
+    setBusy(true);
+
+    const shippingAddress = parseAddress(
+      form.shipping_address
+    );
+
+    const billingAddress = parseAddress(
+      form.billing_address
+    );
+
+    const { data, error } = await sb
+      .from('orders')
+      .update({
+        order_number: form.order_number,
+        customer_email: form.customer_email,
+        customer_first_name:
+          form.customer_first_name,
+        customer_last_name:
+          form.customer_last_name,
+        shipping_method:
+          form.shipping_method,
+        payment_method:
+          form.payment_method,
+        payment_ip_address:
+          form.payment_ip_address,
+        financial_status:
+          form.financial_status,
+        fulfillment_status:
+          form.fulfillment_status,
+        shipping_address: shippingAddress,
+        billing_address: billingAddress
+      })
+      .eq('id', order.id)
+      .eq('workspace_id', workspaceId)
+      .select('*')
+      .single();
+
+    if (error) {
+      alert(error.message);
+      setBusy(false);
+      return;
+    }
+
+    setOrder(data as Order);
+
+    setUpdates((current) => [
+      ...current,
+      {
+        id: crypto.randomUUID(),
+        message: 'Order details were edited',
+        created_at: new Date().toISOString()
+      }
+    ]);
+
+    setEditing(false);
+    setBusy(false);
+  }
+
+  async function duplicateOrder() {
+    if (!sb || !order) return;
+
+    setBusy(true);
+
+    const {
+      id,
+      ordered_at,
+      ...copy
+    } = order;
+
+    const newOrder = {
+      ...copy,
+      order_number: `${order.order_number ?? 'ORDER'}-COPY`,
+      workspace_id: workspaceId,
+      ordered_at: new Date().toISOString()
+    };
+
+    const { error } = await sb
+      .from('orders')
+      .insert(newOrder);
+
+    if (error) {
+      alert(error.message);
+    } else {
+      alert('Order duplicated successfully.');
+    }
+
+    setBusy(false);
+  }
+
+  async function deleteOrder() {
+    if (!sb || !order) return;
+
+    const ok = window.confirm(
+      `Delete order ${order.order_number ?? ''}?`
+    );
+
+    if (!ok) return;
+
+    setBusy(true);
+
+    const { error } = await sb
+      .from('orders')
+      .delete()
+      .eq('id', order.id)
+      .eq('workspace_id', workspaceId);
+
+    if (error) {
+      alert(error.message);
+      setBusy(false);
+      return;
+    }
+
+    back();
+  }
+
+  function addOrder() {
+    alert(
+      'Add Order will be connected to the order creation flow next.'
+    );
+  }
+
+  function splitOrder() {
+    alert(
+      'Split Order will be connected to the order-splitting flow next.'
+    );
+  }
+
+  function deleteItems() {
+    if (!items.length) {
+      alert('There are no items to delete.');
+      return;
+    }
+
+    setItems([]);
+  }
+
+  function duplicateItems() {
+    if (!items.length) {
+      alert('There are no items to duplicate.');
+      return;
+    }
+
+    setItems((current) => [
+      ...current,
+      ...current.map((item) => ({
+        ...item,
+        id: crypto.randomUUID()
+      }))
+    ]);
+  }
+
+  function addItems() {
+    setItems((current) => [
+      ...current,
+      {
+        id: crypto.randomUUID(),
+        order_id: order?.id,
+        product_title: 'New product',
+        product_sku: 'NEW-SKU',
+        quantity: 1,
+        product_type: 'Non-fragile',
+        price: 0
+      }
+    ]);
+  }
+
+  if (loading) {
+    return (
+      <div className="content">
+        <div className="panel">
+          <div className="order-loading">
+            <div className="spinner" />
+            <span>Loading order…</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!order) {
+    return (
+      <div className="content">
+        <div className="panel">
+          <div className="empty compact">
+            <div className="empty-icon">
+              <ShoppingCart size={18} />
+            </div>
+            <h3>Order not found</h3>
+            <button
+              className="secondary"
+              onClick={back}
+            >
+              <ArrowLeft size={15} />
+              Back to Orders
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const currency = order.currency ?? 'USD';
+
+  const subtotal =
+    order.subtotal_amount ??
+    Number(order.total_amount ?? 0);
+
+  const taxes = order.tax_amount ?? 0;
+  const shipping = order.shipping_amount ?? 0;
+  const handling = order.handling_amount ?? 0;
+  const discounts = order.discount_amount ?? 0;
+
+  const grandTotal =
+    order.total_amount ??
+    subtotal +
+      taxes +
+      shipping +
+      handling -
+      discounts;
+
+  return (
+    <div className="content order-detail-page">
+
+      {/* HEADER */}
+
+      <div className="order-page-header">
+        <div>
+          <button
+            className="back-button"
+            onClick={back}
+          >
+            <ArrowLeft size={15} />
+            Back to Orders
+          </button>
+
+          <div className="order-title-row">
+            <div>
+              <p className="eyebrow">
+                ORDER MANAGEMENT
+              </p>
+
+              <h1>
+                Order #
+                {order.order_number ??
+                  order.id.slice(0, 8)}
+              </h1>
+
+              <p className="muted">
+                {order.ordered_at
+                  ? new Date(
+                      order.ordered_at
+                    ).toLocaleString()
+                  : 'Order date unavailable'}
+              </p>
+            </div>
+
+            <div className="order-status-stack">
+              <span className="order-status">
+                {order.financial_status ??
+                  'Pending'}
+              </span>
+
+              <span className="fulfillment-status">
+                {order.fulfillment_status ??
+                  'Unfulfilled'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* CUSTOMER & ORDER DETAILS — FIRST ACTUAL SECTION */}
+
+      <section className="panel order-details-panel">
+        <div className="panel-head">
+          <div>
+            <h2>Customer & order details</h2>
+            <p className="muted">
+              Customer, payment and delivery
+              information.
+            </p>
+          </div>
+
+          {!editing ? (
+            <button
+              className="secondary"
+              onClick={() => setEditing(true)}
+            >
+              <Pencil size={14} />
+              Edit details
+            </button>
+          ) : (
+            <div className="button-row">
+              <button
+                className="secondary"
+                onClick={() => {
+                  setEditing(false);
+                  loadOrder();
+                }}
+              >
+                <X size={14} />
+                Cancel
+              </button>
+
+              <button
+                className="primary"
+                disabled={busy}
+                onClick={saveOrder}
+              >
+                <Save size={14} />
+                {busy
+                  ? 'Saving…'
+                  : 'Save changes'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="order-details-grid">
+
+          <OrderField
+            label="Order number"
+            value={form.order_number}
+            editing={editing}
+            onChange={(v) =>
+              updateField('order_number', v)
+            }
+          />
+
+          <OrderField
+            label="Customer email"
+            value={form.customer_email}
+            editing={editing}
+            onChange={(v) =>
+              updateField('customer_email', v)
+            }
+          />
+
+          <OrderField
+            label="First name"
+            value={form.customer_first_name}
+            editing={editing}
+            onChange={(v) =>
+              updateField(
+                'customer_first_name',
+                v
+              )
+            }
+          />
+
+          <OrderField
+            label="Last name"
+            value={form.customer_last_name}
+            editing={editing}
+            onChange={(v) =>
+              updateField(
+                'customer_last_name',
+                v
+              )
+            }
+          />
+
+          <OrderField
+            label="Shipping method"
+            value={form.shipping_method}
+            editing={editing}
+            onChange={(v) =>
+              updateField(
+                'shipping_method',
+                v
+              )
+            }
+          />
+
+          <OrderField
+            label="Payment method"
+            value={form.payment_method}
+            editing={editing}
+            onChange={(v) =>
+              updateField(
+                'payment_method',
+                v
+              )
+            }
+          />
+
+          <OrderField
+            label="Payment IP address"
+            value={form.payment_ip_address}
+            editing={editing}
+            onChange={(v) =>
+              updateField(
+                'payment_ip_address',
+                v
+              )
+            }
+          />
+
+          <OrderField
+            label="Payment status"
+            value={form.financial_status}
+            editing={editing}
+            onChange={(v) =>
+              updateField(
+                'financial_status',
+                v
+              )
+            }
+          />
+
+          <OrderField
+            label="Fulfillment status"
+            value={form.fulfillment_status}
+            editing={editing}
+            onChange={(v) =>
+              updateField(
+                'fulfillment_status',
+                v
+              )
+            }
+          />
+
+        </div>
+
+        <div className="address-grid">
+
+          <AddressField
+            label="Shipping address"
+            value={form.shipping_address}
+            editing={editing}
+            onChange={(v) =>
+              updateField(
+                'shipping_address',
+                v
+              )
+            }
+          />
+
+          <AddressField
+            label="Billing address"
+            value={form.billing_address}
+            editing={editing}
+            onChange={(v) =>
+              updateField(
+                'billing_address',
+                v
+              )
+            }
+          />
+
+        </div>
+      </section>
+
+      {/* ORDER ITEMS */}
+
+      <section className="panel order-items-panel">
+        <div className="panel-head">
+          <div>
+            <h2>Order items</h2>
+            <p className="muted">
+              Products included in this order.
+            </p>
+          </div>
+
+          <span className="item-count">
+            {items.length}{' '}
+            {items.length === 1
+              ? 'item'
+              : 'items'}
+          </span>
+        </div>
+
+        {items.length === 0 ? (
+          <div className="empty compact">
+            <div className="empty-icon">
+              <Package size={18} />
+            </div>
+
+            <h3>No order items</h3>
+
+            <p>
+              Add items to this order using the
+              Add Items action below.
+            </p>
+          </div>
+        ) : (
+          <div className="table-wrap">
+            <table className="order-items-table">
+              <thead>
+                <tr>
+                  <th>Order ID</th>
+                  <th>Product title</th>
+                  <th>SKU</th>
+                  <th>QTY</th>
+                  <th>Type</th>
+                  <th>Price</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {items.map((item) => (
+                  <tr key={item.id}>
+                    <td>
+                      <span className="mono">
+                        {item.order_id ??
+                          order.id.slice(
+                            0,
+                            8
+                          )}
+                      </span>
+                    </td>
+
+                    <td>
+                      <strong>
+                        {item.product_title}
+                      </strong>
+                    </td>
+
+                    <td>
+                      {item.product_sku}
+                    </td>
+
+                    <td>
+                      {item.quantity}
+                    </td>
+
+                    <td>
+                      <span
+                        className={`product-type ${
+                          item.product_type
+                            .toLowerCase()
+                            .includes(
+                              'fragile'
+                            ) &&
+                          !item.product_type
+                            .toLowerCase()
+                            .includes(
+                              'non'
+                            )
+                            ? 'fragile'
+                            : 'non-fragile'
+                        }`}
+                      >
+                        {item.product_type}
+                      </span>
+                    </td>
+
+                    <td>
+                      {currency}{' '}
+                      {Number(
+                        item.price
+                      ).toFixed(2)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {/* ORDER SUMMARY */}
+
+      <section className="panel order-summary-panel">
+        <div className="panel-head">
+          <div>
+            <h2>Order summary</h2>
+            <p className="muted">
+              Financial summary for this order.
+            </p>
+          </div>
+        </div>
+
+        <div className="summary-list">
+
+          <div>
+            <span>Subtotal</span>
+            <strong>
+              {currency}{' '}
+              {Number(subtotal).toFixed(2)}
+            </strong>
+          </div>
+
+          <div>
+            <span>Taxes</span>
+            <strong>
+              {currency}{' '}
+              {Number(taxes).toFixed(2)}
+            </strong>
+          </div>
+
+          <div>
+            <span>Shipping</span>
+            <strong>
+              {currency}{' '}
+              {Number(shipping).toFixed(2)}
+            </strong>
+          </div>
+
+          <div>
+            <span>Handling</span>
+            <strong>
+              {currency}{' '}
+              {Number(handling).toFixed(2)}
+            </strong>
+          </div>
+
+          <div>
+            <span>Discounts</span>
+            <strong>
+              -{currency}{' '}
+              {Number(discounts).toFixed(2)}
+            </strong>
+          </div>
+
+          <div className="summary-total">
+            <span>Grand Total</span>
+
+            <strong>
+              {currency}{' '}
+              {Number(grandTotal).toFixed(2)}
+            </strong>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ACTIONS */}
+
+      <section className="order-actions-section">
+        <div className="order-actions">
+
+          <button
+            className="primary"
+            onClick={() => setEditing(true)}
+          >
+            <Pencil size={14} />
+            Edit order
+          </button>
+
+          <button
+            className="secondary"
+            onClick={splitOrder}
+          >
+            <Split size={14} />
+            Split Order
+          </button>
+
+          <button
+            className="secondary"
+            onClick={duplicateOrder}
+            disabled={busy}
+          >
+            <Copy size={14} />
+            Duplicate Order
+          </button>
+
+          <button
+            className="secondary"
+            onClick={addOrder}
+          >
+            <Plus size={14} />
+            Add Order
+          </button>
+
+          <button
+            className="secondary"
+            onClick={deleteItems}
+          >
+            <Trash2 size={14} />
+            Delete Items
+          </button>
+
+          <button
+            className="secondary"
+            onClick={duplicateItems}
+          >
+            <Copy size={14} />
+            Duplicate Items
+          </button>
+
+          <button
+            className="secondary"
+            onClick={addItems}
+          >
+            <Plus size={14} />
+            Add Items
+          </button>
+
+          <button
+            className="danger-outline"
+            onClick={deleteOrder}
+            disabled={busy}
+          >
+            <Trash2 size={14} />
+            Delete Order
+          </button>
+
+        </div>
+      </section>
+
+      {/* PRINT */}
+
+      <div className="print-order">
+        <button
+          className="print-button"
+          onClick={() => window.print()}
+        >
+          <Printer size={16} />
+          Print Receipt
+        </button>
+      </div>
+
+      {/* ORDER UPDATES */}
+
+      <section className="panel order-updates-panel">
+        <div className="panel-head">
+          <div>
+            <h2>Order updates</h2>
+            <p className="muted">
+              Activity history for this order.
+            </p>
+          </div>
+        </div>
+
+        <div className="order-timeline">
+
+          {updates.map((update) => (
+            <div
+              className="timeline-item"
+              key={update.id}
+            >
+              <div className="timeline-icon">
+                <Clock3 size={15} />
+              </div>
+
+              <div className="timeline-content">
+                <div className="timeline-top">
+                  <strong>
+                    {update.message}
+                  </strong>
+
+                  <span>
+                    {formatTime(
+                      update.created_at
+                    )}
+                  </span>
+                </div>
+
+                <p>
+                  {formatDate(
+                    update.created_at
+                  )}
+                </p>
+              </div>
+            </div>
+          ))}
+
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function OrderField({
+  label,
+  value,
+  editing,
+  onChange
+}: {
+  label: string;
+  value: string;
+  editing: boolean;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="detail-field">
+      <span className="field-label">
+        {label}
+      </span>
+
+      {editing ? (
+        <input
+          value={value}
+          onChange={(e) =>
+            onChange(e.target.value)
+          }
+        />
+      ) : (
+        <div className="field-value">
+          {value || '—'}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AddressField({
+  label,
+  value,
+  editing,
+  onChange
+}: {
+  label: string;
+  value: string;
+  editing: boolean;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="address-field">
+      <span className="field-label">
+        {label}
+      </span>
+
+      {editing ? (
+        <textarea
+          value={value}
+          onChange={(e) =>
+            onChange(e.target.value)
+          }
+          rows={7}
+        />
+      ) : (
+        <pre className="address-value">
+          {value || '—'}
+        </pre>
+      )}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* HELPERS                                                                    */
+/* -------------------------------------------------------------------------- */
+
+function formatAddress(address: any): string {
+  if (!address) return '';
+
+  if (typeof address === 'string') {
+    return address;
+  }
+
+  if (Array.isArray(address)) {
+    return address
+      .map((x) =>
+        typeof x === 'string'
+          ? x
+          : JSON.stringify(x)
+      )
+      .join('\n');
+  }
+
+  const lines = [
+    address.first_name || address.name,
+    address.last_name,
+    address.address1,
+    address.address2,
+    address.city,
+    address.state,
+    address.postal_code ||
+      address.zip ||
+      address.zip_code,
+    address.country,
+    address.phone
+  ].filter(Boolean);
+
+  if (lines.length) {
+    return lines.join('\n');
+  }
+
+  return JSON.stringify(
+    address,
+    null,
+    2
+  );
+}
+
+function parseAddress(value: string): any {
+  const trimmed = value.trim();
+
+  if (!trimmed) return {};
+
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return {
+      formatted: trimmed
+    };
+  }
+}
+
+function extractOrderItems(
+  order: Order
+): OrderItem[] {
+  const raw = order.items;
+
+  if (!raw) {
+    return [
+      {
+        id: `${order.id}-item-1`,
+        order_id: order.id,
+        product_title: 'Test Product',
+        product_sku: 'TEST-SKU-001',
+        quantity: order.quantity ?? 1,
+        product_type: 'Non-fragile',
+        price:
+          Number(order.total_amount ?? 0) /
+          Math.max(order.quantity ?? 1, 1)
+      }
+    ];
+  }
+
+  let parsed = raw;
+
+  if (typeof raw === 'string') {
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return [];
+    }
+  }
+
+  if (!Array.isArray(parsed)) {
+    parsed = [parsed];
+  }
+
+  return parsed.map(
+    (item: any, index: number) => ({
+      id:
+        String(
+          item.id ??
+            `${order.id}-item-${index + 1}`
+        ),
+
+      order_id: order.id,
+
+      product_title:
+        item.product_title ??
+        item.title ??
+        item.product ??
+        'Product',
+
+      product_sku:
+        item.product_sku ??
+        item.sku ??
+        '—',
+
+      quantity:
+        Number(
+          item.quantity ??
+            item.qty ??
+            1
+        ),
+
+      product_type:
+        item.product_type ??
+        item.type ??
+        'Non-fragile',
+
+      price:
+        Number(
+          item.price ??
+            item.unit_price ??
+            0
+        )
+    })
+  );
+}
+
+function formatTime(value: string) {
+  return new Date(value).toLocaleTimeString(
+    [],
+    {
+      hour: '2-digit',
+      minute: '2-digit'
+    }
+  );
+}
+
+function formatDate(value: string) {
+  return new Date(value).toLocaleDateString(
+    [],
+    {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* RULES                                                                      */
+/* -------------------------------------------------------------------------- */
 
 function Rules({
   workspaceId,
   folders
-}:{
-  workspaceId:string;
-  folders:F[]
-}){
+}: {
+  workspaceId: string;
+  folders: F[];
+}) {
+  const [rules, setRules] = useState<Rule[]>([]);
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [editing, setEditing] =
+    useState<Rule | null>(null);
 
-  const[rules,setRules]=useState<Rule[]>([]);
-  const[open,setOpen]=useState(false);
-  const[busy,setBusy]=useState(false);
-  const[editing,setEditing]=useState<Rule|null>(null);
+  const [name, setName] = useState('');
+  const [trigger, setTrigger] =
+    useState('order.created');
+  const [field, setField] =
+    useState('quantity');
+  const [operator, setOperator] =
+    useState('greater_than');
+  const [value, setValue] = useState('');
+  const [folder, setFolder] =
+    useState(folders[0]?.id ?? '');
 
-  const[name,setName]=useState('');
-  const[trigger,setTrigger]=useState(
-    'order.created'
-  );
-  const[field,setField]=useState(
-    'quantity'
-  );
-  const[operator,setOperator]=useState(
-    'greater_than'
-  );
-  const[value,setValue]=useState('');
-  const[folder,setFolder]=useState(
-    folders[0]?.id??''
-  );
+  async function load() {
+    if (!sb) return;
 
-
-  async function load(){
-
-    if(!sb)return;
-
-    const{data}=await sb
+    const { data } = await sb
       .from('rules')
       .select(
         'id,name,description,enabled,priority,trigger_type,conditions,actions'
       )
-      .eq('workspace_id',workspaceId)
+      .eq('workspace_id', workspaceId)
       .order('priority');
 
-    setRules((data??[])as Rule[]);
+    setRules((data ?? []) as Rule[]);
   }
 
-
-  useEffect(()=>{
+  useEffect(() => {
     load();
-  },[workspaceId]);
+  }, [workspaceId]);
 
-
-  useEffect(()=>{
-
-    if(!folder&&folders[0]){
+  useEffect(() => {
+    if (!folder && folders[0]) {
       setFolder(folders[0].id);
     }
+  }, [folders]);
 
-  },[folders]);
-
-
-  function reset(){
-
+  function reset() {
     setEditing(null);
     setName('');
     setTrigger('order.created');
     setField('quantity');
     setOperator('greater_than');
     setValue('');
-    setFolder(folders[0]?.id??'');
+    setFolder(folders[0]?.id ?? '');
     setOpen(true);
-
   }
 
-
-  function edit(r:Rule){
-
+  function edit(r: Rule) {
     setEditing(r);
     setName(r.name);
     setTrigger(r.trigger_type);
 
-    const c=r.conditions?.[0]??{};
+    const c = r.conditions?.[0] ?? {};
 
-    setField(c.field??'quantity');
+    setField(c.field ?? 'quantity');
     setOperator(
-      c.operator??'greater_than'
+      c.operator ?? 'greater_than'
     );
-    setValue(
-      String(c.value??'')
-    );
+    setValue(String(c.value ?? ''));
 
     setFolder(
-      r.actions?.[0]?.folder_id??
-      folders[0]?.id??
-      ''
+      r.actions?.[0]?.folder_id ??
+        folders[0]?.id ??
+        ''
     );
 
     setOpen(true);
   }
 
-
   async function save(
-    e:React.FormEvent
-  ){
-
+    e: React.FormEvent
+  ) {
     e.preventDefault();
 
-    if(!sb||!name.trim()||!folder)return;
+    if (
+      !sb ||
+      !name.trim() ||
+      !folder
+    )
+      return;
 
     setBusy(true);
 
-
-    const payload={
-
-      workspace_id:workspaceId,
-
-      name:name.trim(),
-
-      description:
-        `${field} ${operator} ${value} → move to folder`,
-
-      enabled:true,
-
+    const payload = {
+      workspace_id: workspaceId,
+      name: name.trim(),
+      description: `${field} ${operator} ${value} → move to folder`,
+      enabled: true,
       priority:
-        editing?.priority??
-        rules.length+1,
-
-      trigger_type:trigger,
-
-      conditions:[
+        editing?.priority ??
+        rules.length + 1,
+      trigger_type: trigger,
+      conditions: [
         {
           field,
           operator,
           value
         }
       ],
-
-      actions:[
+      actions: [
         {
-          type:'move_to_folder',
-          folder_id:folder
+          type: 'move_to_folder',
+          folder_id: folder
         }
       ]
-
     };
 
+    const q = editing
+      ? sb
+          .from('rules')
+          .update(payload)
+          .eq('id', editing.id)
+      : sb.from('rules').insert(
+          payload
+        );
 
-    const q=editing
+    const { error } = await q;
 
-      ?sb
-        .from('rules')
-        .update(payload)
-        .eq('id',editing.id)
-
-      :sb
-        .from('rules')
-        .insert(payload);
-
-
-    const{error}=await q;
-
-
-    if(error){
-
+    if (error) {
       alert(error.message);
-
-    }else{
-
+    } else {
       setOpen(false);
-
       await load();
-
     }
-
 
     setBusy(false);
   }
 
-
-  async function toggle(r:Rule){
-
-    if(!sb)return;
+  async function toggle(r: Rule) {
+    if (!sb) return;
 
     await sb
       .from('rules')
       .update({
-        enabled:!r.enabled
+        enabled: !r.enabled
       })
-      .eq('id',r.id);
+      .eq('id', r.id);
 
     await load();
   }
 
+  async function remove(r: Rule) {
+    if (!sb) return;
 
-  async function remove(r:Rule){
-
-    if(!sb)return;
-
-    if(
+    if (
       !confirm(
         `Delete “${r.name}”?`
       )
-    )return;
+    )
+      return;
 
     await sb
       .from('rules')
       .delete()
-      .eq('id',r.id);
+      .eq('id', r.id);
 
     await load();
   }
 
-
-  return(
+  return (
     <div className="content">
-
       <header>
-
         <div>
-
           <p className="eyebrow">
             AUTOMATION
           </p>
 
-          <h1>
-            Rule builder
-          </h1>
+          <h1>Rule builder</h1>
 
           <p className="muted">
-            Route orders automatically
-            using conditions and actions.
+            Route orders automatically using
+            conditions and actions.
           </p>
-
         </div>
-
 
         <button
           className="primary"
           onClick={reset}
         >
-          <Plus size={15}/>
+          <Plus size={15} />
           Create rule
         </button>
-
       </header>
 
-
-      {open&&(
-
+      {open && (
         <form
           className="panel rule-editor"
           onSubmit={save}
         >
-
           <div className="panel-head">
-
             <div>
-
               <h2>
                 {editing
-                  ?'Edit rule'
-                  :'Create automation rule'}
+                  ? 'Edit rule'
+                  : 'Create automation rule'}
               </h2>
 
               <p className="muted">
-                Start with one trigger,
-                one condition and one action.
+                Start with one trigger, one
+                condition and one action.
               </p>
-
             </div>
-
 
             <button
               type="button"
               className="secondary"
-              onClick={()=>
+              onClick={() =>
                 setOpen(false)
               }
             >
               Cancel
             </button>
-
           </div>
 
-
           <div className="rule-grid">
-
             <label>
               Rule name
 
               <input
                 value={name}
-                onChange={e=>
+                onChange={(e) =>
                   setName(e.target.value)
                 }
                 placeholder="Bulk orders"
                 required
               />
-
             </label>
-
 
             <label>
               When
 
               <select
                 value={trigger}
-                onChange={e=>
-                  setTrigger(e.target.value)
+                onChange={(e) =>
+                  setTrigger(
+                    e.target.value
+                  )
                 }
               >
-
                 <option value="order.created">
                   Order created
                 </option>
@@ -3060,22 +2496,20 @@ function Rules({
                 <option value="order.cancelled">
                   Order cancelled
                 </option>
-
               </select>
-
             </label>
-
 
             <label>
               Condition
 
               <select
                 value={field}
-                onChange={e=>
-                  setField(e.target.value)
+                onChange={(e) =>
+                  setField(
+                    e.target.value
+                  )
                 }
               >
-
                 <option value="quantity">
                   Quantity
                 </option>
@@ -3095,22 +2529,20 @@ function Rules({
                 <option value="customer_email">
                   Customer email
                 </option>
-
               </select>
-
             </label>
-
 
             <label>
               Operator
 
               <select
                 value={operator}
-                onChange={e=>
-                  setOperator(e.target.value)
+                onChange={(e) =>
+                  setOperator(
+                    e.target.value
+                  )
                 }
               >
-
                 <option value="greater_than">
                   greater than
                 </option>
@@ -3126,233 +2558,185 @@ function Rules({
                 <option value="not_equals">
                   does not equal
                 </option>
-
               </select>
-
             </label>
-
 
             <label>
               Value
 
               <input
                 value={value}
-                onChange={e=>
-                  setValue(e.target.value)
+                onChange={(e) =>
+                  setValue(
+                    e.target.value
+                  )
                 }
                 placeholder={
-                  field==='quantity'
-                    ?'5'
-                    :'value'
+                  field === 'quantity'
+                    ? '5'
+                    : 'value'
                 }
                 required
               />
-
             </label>
-
 
             <label>
               Then move to
 
               <select
                 value={folder}
-                onChange={e=>
-                  setFolder(e.target.value)
+                onChange={(e) =>
+                  setFolder(
+                    e.target.value
+                  )
                 }
               >
-
-                {folders.map(f=>(
-
+                {folders.map((f) => (
                   <option
                     key={f.id}
                     value={f.id}
                   >
                     {f.name}
                   </option>
-
                 ))}
-
               </select>
-
             </label>
-
           </div>
-
 
           <button
             className="primary"
             disabled={busy}
           >
-
             {busy
-              ?'Saving…'
-              :editing
-                ?'Save changes'
-                :'Create rule'}
+              ? 'Saving…'
+              : editing
+                ? 'Save changes'
+                : 'Create rule'}
 
-            <ArrowRight size={15}/>
-
+            <ArrowRight size={15} />
           </button>
-
         </form>
-
       )}
 
-
       <div className="panel rules-panel">
-
-        {rules.length===0?(
-
+        {rules.length === 0 ? (
           <div className="empty compact">
-
             <div className="empty-icon">
-              <SlidersHorizontal size={18}/>
+              <SlidersHorizontal
+                size={18}
+              />
             </div>
 
-            <h3>
-              No rules yet
-            </h3>
+            <h3>No rules yet</h3>
 
             <p>
-              Create your first workflow
-              to automatically route orders.
+              Create your first workflow to
+              automatically route orders.
             </p>
-
           </div>
-
-        ):(
-
-          rules.map(r=>(
-
+        ) : (
+          rules.map((r) => (
             <div
               className="rule-row"
               key={r.id}
             >
-
               <div className="rule-main">
-
                 <div
-                  className={
-                    `rule-dot ${
-                      r.enabled?'on':''
-                    }`
-                  }
+                  className={`rule-dot ${
+                    r.enabled ? 'on' : ''
+                  }`}
                 />
 
                 <div>
-
                   <strong>
                     {r.name}
                   </strong>
 
                   <span>
-
                     When{' '}
                     {r.trigger_type.replace(
                       'order.',
                       'order '
-                    )}
-
-                    {' · '}
-
-                    {r.conditions?.[0]?.field??
-                      'condition'}
-
-                    {' '}
-
-                    {r.conditions?.[0]?.operator??
-                      ''}
-
-                    {' '}
-
-                    {r.conditions?.[0]?.value??
-                      ''}
-
-                    {' → '}
-
+                    )}{' '}
+                    ·{' '}
+                    {r.conditions?.[0]
+                      ?.field ??
+                      'condition'}{' '}
+                    {r.conditions?.[0]
+                      ?.operator ??
+                      ''}{' '}
+                    {r.conditions?.[0]
+                      ?.value ??
+                      ''}{' '}
+                    →{' '}
                     {folders.find(
-                      f=>
-                        f.id===
-                        r.actions?.[0]?.folder_id
-                    )?.name??'folder'}
-
+                      (f) =>
+                        f.id ===
+                        r.actions?.[0]
+                          ?.folder_id
+                    )?.name ??
+                      'folder'}
                   </span>
-
                 </div>
-
               </div>
 
-
               <div className="row-actions">
-
                 <button
-                  onClick={()=>toggle(r)}
+                  onClick={() =>
+                    toggle(r)
+                  }
                   title={
                     r.enabled
-                      ?'Disable'
-                      :'Enable'
+                      ? 'Disable'
+                      : 'Enable'
                   }
                 >
-
-                  <Power size={13}/>
-
-                  {r.enabled?'On':'Off'}
-
+                  <Power size={13} />
+                  {r.enabled
+                    ? 'On'
+                    : 'Off'}
                 </button>
 
-
                 <button
-                  onClick={()=>edit(r)}
+                  onClick={() =>
+                    edit(r)
+                  }
                 >
                   Edit
                 </button>
 
-
                 <button
                   className="danger"
-                  onClick={()=>remove(r)}
+                  onClick={() =>
+                    remove(r)
+                  }
                 >
-                  <Trash2 size={13}/>
+                  <Trash2 size={13} />
                 </button>
-
               </div>
-
             </div>
-
           ))
-
         )}
-
       </div>
-
     </div>
   );
 }
 
-
-/* =========================================================
-   INTEGRATIONS
-========================================================= */
-
-const Integrations=()=>(
+const Integrations = () => (
   <Page
     title="Integrations"
     eyebrow="CONNECTIONS"
   >
-
     <div className="integration-card">
-
       <div className="shopify-placeholder">
         S
       </div>
 
-      <h2>
-        Shopify
-      </h2>
+      <h2>Shopify</h2>
 
       <p>
-        Import orders, receive webhooks
-        and run automation rules.
+        Import orders, receive webhooks and
+        run automation rules.
       </p>
 
       <button
@@ -3361,64 +2745,42 @@ const Integrations=()=>(
       >
         Connect Shopify · Coming next
       </button>
-
     </div>
-
   </Page>
 );
-
-
-/* =========================================================
-   PAGE
-========================================================= */
 
 function Page({
   title,
   eyebrow,
   children
-}:{
-  title:string;
-  eyebrow:string;
-  children:React.ReactNode
-}){
-
-  return(
+}: {
+  title: string;
+  eyebrow: string;
+  children: React.ReactNode;
+}) {
+  return (
     <div className="content">
-
       <header>
-
         <div>
-
           <p className="eyebrow">
             {eyebrow}
           </p>
 
-          <h1>
-            {title}
-          </h1>
-
+          <h1>{title}</h1>
         </div>
-
       </header>
 
       {children}
-
     </div>
   );
 }
 
-
-/* =========================================================
-   BILLING
-========================================================= */
-
 function Billing({
   close
-}:{
-  close?:()=>void
-}){
-
-  const plans=[
+}: {
+  close?: () => void;
+}) {
+  const plans = [
     [
       'Starter',
       '$19',
@@ -3436,111 +2798,76 @@ function Billing({
     ]
   ];
 
-
-  return(
+  return (
     <Page
       title="Billing"
       eyebrow="ACCOUNT"
     >
-
       <div className="plans">
-
         {plans.map(
-          ([n,p,d],i)=>(
-
+          ([n, p, d], i) => (
             <div
-              className={
-                `plan ${
-                  i===1?'featured':''
-                }`
-              }
+              className={`plan ${
+                i === 1
+                  ? 'featured'
+                  : ''
+              }`}
               key={n}
             >
-
-              {i===1&&(
-
+              {i === 1 && (
                 <span className="popular">
                   Most popular
                 </span>
-
               )}
 
-
-              <h2>
-                {n}
-              </h2>
-
+              <h2>{n}</h2>
 
               <div className="price">
-
                 {p}
-
-                <small>
-                  /month
-                </small>
-
+                <small>/month</small>
               </div>
 
-
-              <p>
-                {d}
-              </p>
-
+              <p>{d}</p>
 
               <button
                 className={
-                  i===1
-                    ?'primary'
-                    :'secondary'
+                  i === 1
+                    ? 'primary'
+                    : 'secondary'
                 }
               >
                 Choose {n}
               </button>
-
             </div>
-
           )
         )}
-
       </div>
 
-
       <div className="billing-note">
-
-        <CircleHelp size={16}/>
+        <CircleHelp size={16} />
 
         <span>
           Razorpay will power subscription
           checkout.
         </span>
-
       </div>
 
-
-      {close&&(
-
+      {close && (
         <button
           className="secondary"
           onClick={close}
         >
           Back
         </button>
-
       )}
-
     </Page>
   );
 }
-
-
-/* =========================================================
-   RENDER
-========================================================= */
 
 createRoot(
   document.getElementById('root')!
 ).render(
   <React.StrictMode>
-    <App/>
+    <App />
   </React.StrictMode>
 );
