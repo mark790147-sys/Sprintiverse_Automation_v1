@@ -135,7 +135,7 @@ function App() {
 
     const {
       data: { subscription }
-    } = sb.auth.onAuthStateChange((_, session) => {
+    } = sb.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
 
@@ -283,7 +283,9 @@ function Auth() {
     <div className="auth-layout">
       <div className="auth-brand">
         <div className="logo large">S</div>
+
         <h1>Automate your order operations.</h1>
+
         <p>
           Route orders, build rules, and keep fulfillment moving without
           repetitive manual work.
@@ -321,6 +323,7 @@ function Auth() {
           {mode === 'signup' && (
             <label>
               Your name
+
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -332,6 +335,7 @@ function Auth() {
 
           <label>
             Email
+
             <input
               type="email"
               value={email}
@@ -343,6 +347,7 @@ function Auth() {
 
           <label>
             Password
+
             <input
               type="password"
               value={pass}
@@ -456,6 +461,7 @@ function Onboard({
 
             <label>
               Your name
+
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -465,6 +471,7 @@ function Onboard({
 
             <label>
               Store / business name
+
               <input
                 value={store}
                 onChange={(e) => setStore(e.target.value)}
@@ -475,6 +482,7 @@ function Onboard({
 
             <label>
               Email
+
               <input value={user.email ?? ''} disabled />
             </label>
 
@@ -513,6 +521,7 @@ function Onboard({
 
             <div className="setup-note">
               <Check size={17} />
+
               <span>
                 Your 1-day free trial starts when setup finishes.
               </span>
@@ -521,10 +530,7 @@ function Onboard({
             {err && <div className="alert error">{err}</div>}
 
             <div className="button-row">
-              <button
-                className="secondary"
-                onClick={() => setStep(1)}
-              >
+              <button className="secondary" onClick={() => setStep(1)}>
                 Back
               </button>
 
@@ -566,8 +572,7 @@ function Dashboard({
     ? Math.max(
         0,
         Math.ceil(
-          (new Date(sub.trial_ends_at).getTime() - Date.now()) /
-            86400000
+          (new Date(sub.trial_ends_at).getTime() - Date.now()) / 86400000
         )
       )
     : 0;
@@ -681,9 +686,7 @@ function Dashboard({
           )}
 
           <div className="user-avatar">
-            {(user.user_metadata?.full_name ??
-              user.email ??
-              'U')[0].toUpperCase()}
+            {(user.user_metadata?.full_name ?? user.email ?? 'U')[0].toUpperCase()}
           </div>
         </div>
 
@@ -714,6 +717,7 @@ function Dashboard({
           <OrderDetail
             orderId={selectedOrderId}
             workspaceId={ws.id}
+            workspaceName={ws.name}
             folders={folders}
             back={goToOrders}
           />
@@ -743,7 +747,9 @@ function Overview({
       <header>
         <div>
           <p className="eyebrow">WORKSPACE</p>
+
           <h1>{ws.name}</h1>
+
           <p className="muted">
             Automate your order operations from one place.
           </p>
@@ -790,6 +796,7 @@ function Overview({
           <div className="panel-head">
             <div>
               <h2>Automation activity</h2>
+
               <p className="muted">
                 Recent automation runs will appear here.
               </p>
@@ -806,8 +813,7 @@ function Overview({
             <h3>No automation activity yet</h3>
 
             <p>
-              Connect a store and create a rule to start
-              automating.
+              Connect a store and create a rule to start automating.
             </p>
           </div>
         </div>
@@ -816,6 +822,7 @@ function Overview({
           <div className="panel-head">
             <div>
               <h2>Folders</h2>
+
               <p className="muted">
                 Your default order workflow.
               </p>
@@ -912,7 +919,9 @@ function Folders({
       <header>
         <div>
           <p className="eyebrow">WORKFLOW</p>
+
           <h1>Folders</h1>
+
           <p className="muted">
             Add, rename or delete order folders.
           </p>
@@ -1018,7 +1027,9 @@ function Orders({
       <header>
         <div>
           <p className="eyebrow">ORDER MANAGEMENT</p>
+
           <h1>Orders</h1>
+
           <p className="muted">
             Orders will arrive here from connected stores.
           </p>
@@ -1051,8 +1062,8 @@ function Orders({
             </h3>
 
             <p>
-              Connect a store or create a test order to
-              start importing orders.
+              Connect a store or create a test order to start importing
+              orders.
             </p>
           </div>
         ) : (
@@ -1129,11 +1140,13 @@ function Orders({
 function OrderDetail({
   orderId,
   workspaceId,
+  workspaceName,
   folders,
   back
 }: {
   orderId: string;
   workspaceId: string;
+  workspaceName: string;
   folders: F[];
   back: () => void;
 }) {
@@ -1148,7 +1161,6 @@ function OrderDetail({
     customer_email: '',
     customer_first_name: '',
     customer_last_name: '',
-    fulfillment_status: '',
     shipping_address: '',
     billing_address: ''
   });
@@ -1186,8 +1198,6 @@ function OrderDetail({
         current.customer_first_name ?? '',
       customer_last_name:
         current.customer_last_name ?? '',
-      fulfillment_status:
-        current.fulfillment_status ?? '',
       shipping_address: formatAddress(
         current.shipping_address
       ),
@@ -1234,16 +1244,6 @@ function OrderDetail({
       form.billing_address
     );
 
-    /*
-     * IMPORTANT:
-     * Only customer contact/name, fulfillment status,
-     * shipping address and billing address are saved here.
-     *
-     * Order number, shipping method, payment method,
-     * payment IP and payment status are intentionally
-     * NOT included because they are read-only.
-     */
-
     const { data, error } = await sb
       .from('orders')
       .update({
@@ -1252,8 +1252,6 @@ function OrderDetail({
           form.customer_first_name,
         customer_last_name:
           form.customer_last_name,
-        fulfillment_status:
-          form.fulfillment_status,
         shipping_address: shippingAddress,
         billing_address: billingAddress
       })
@@ -1274,7 +1272,7 @@ function OrderDetail({
       ...current,
       {
         id: crypto.randomUUID(),
-        message: 'Order details were edited',
+        message: 'Customer details were edited',
         created_at: new Date().toISOString()
       }
     ]);
@@ -1412,7 +1410,9 @@ function OrderDetail({
             <div className="empty-icon">
               <ShoppingCart size={18} />
             </div>
+
             <h3>Order not found</h3>
+
             <button
               className="secondary"
               onClick={back}
@@ -1427,14 +1427,6 @@ function OrderDetail({
   }
 
   const currency = order.currency ?? 'USD';
-  const currencySymbol =
-    currency === 'USD'
-      ? '$'
-      : currency === 'EUR'
-        ? '€'
-        : currency === 'GBP'
-          ? '£'
-          : currency;
 
   const subtotal =
     order.subtotal_amount ??
@@ -1453,13 +1445,271 @@ function OrderDetail({
       handling -
       discounts;
 
-  const displayOrderNumber =
-    order.order_number ?? order.id.slice(0, 8);
-
   return (
     <div className="content order-detail-page">
 
-      {/* HEADER */}
+      {/* ------------------------------------------------------------------ */}
+      {/* STORE RECEIPT - PRINT ONLY                                         */}
+      {/* ------------------------------------------------------------------ */}
+
+      <div className="store-receipt">
+
+        <div className="receipt-header">
+          <div className="receipt-store">
+            <h2 className="receipt-store-name">
+              {workspaceName}
+            </h2>
+
+            <p className="receipt-store-details">
+              Store / Business
+            </p>
+          </div>
+
+          <div className="receipt-title">
+            <h1>INVOICE</h1>
+
+            <p>
+              Order #
+              {order.order_number ?? order.id.slice(0, 8)}
+            </p>
+
+            <p>
+              {order.ordered_at
+                ? new Date(
+                    order.ordered_at
+                  ).toLocaleDateString()
+                : ''}
+            </p>
+          </div>
+        </div>
+
+        <div className="receipt-info">
+          <div className="receipt-info-block">
+            <h3>Customer</h3>
+
+            <p>
+              {[
+                order.customer_first_name,
+                order.customer_last_name
+              ]
+                .filter(Boolean)
+                .join(' ') || 'Customer'}
+
+              {'\n'}
+
+              {order.customer_email || ''}
+            </p>
+          </div>
+
+          <div className="receipt-info-block">
+            <h3>Order information</h3>
+
+            <div className="receipt-meta">
+              <div className="receipt-meta-row">
+                <span>Order</span>
+
+                <strong>
+                  #{order.order_number ?? order.id.slice(0, 8)}
+                </strong>
+              </div>
+
+              <div className="receipt-meta-row">
+                <span>Date</span>
+
+                <strong>
+                  {order.ordered_at
+                    ? new Date(
+                        order.ordered_at
+                      ).toLocaleDateString()
+                    : '—'}
+                </strong>
+              </div>
+
+              <div className="receipt-meta-row">
+                <span>Payment</span>
+
+                <strong>
+                  {order.payment_method || '—'}
+                </strong>
+              </div>
+
+              <div className="receipt-meta-row">
+                <span>Status</span>
+
+                <strong>
+                  {order.financial_status || '—'}
+                </strong>
+              </div>
+
+              <div className="receipt-meta-row">
+                <span>Shipping</span>
+
+                <strong>
+                  {order.shipping_method || '—'}
+                </strong>
+              </div>
+
+              <div className="receipt-meta-row">
+                <span>Fulfillment</span>
+
+                <strong>
+                  {order.fulfillment_status || 'Unfulfilled'}
+                </strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="receipt-addresses">
+          <div className="receipt-address">
+            <h3>Bill To</h3>
+
+            <p>
+              {formatAddress(order.billing_address) || '—'}
+            </p>
+          </div>
+
+          <div className="receipt-address">
+            <h3>Ship To</h3>
+
+            <p>
+              {formatAddress(order.shipping_address) || '—'}
+            </p>
+          </div>
+        </div>
+
+        <div className="receipt-items">
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>SKU</th>
+                <th>Qty</th>
+                <th>Unit Price</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {items.map((item) => (
+                <tr key={item.id}>
+                  <td>
+                    <div className="receipt-product-title">
+                      {item.product_title}
+                    </div>
+
+                    {item.product_type && (
+                      <div className="receipt-sku">
+                        {item.product_type}
+                      </div>
+                    )}
+                  </td>
+
+                  <td>
+                    {item.product_sku || '—'}
+                  </td>
+
+                  <td>
+                    {item.quantity}
+                  </td>
+
+                  <td>
+                    {currency}{' '}
+                    {Number(
+                      item.price || 0
+                    ).toFixed(2)}
+                  </td>
+
+                  <td>
+                    {currency}{' '}
+                    {(
+                      Number(item.price || 0) *
+                      Number(item.quantity || 0)
+                    ).toFixed(2)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="receipt-bottom">
+          <div className="receipt-totals">
+
+            <div className="receipt-total-row">
+              <span>Subtotal</span>
+
+              <strong>
+                {currency}{' '}
+                {Number(subtotal).toFixed(2)}
+              </strong>
+            </div>
+
+            <div className="receipt-total-row">
+              <span>Tax</span>
+
+              <strong>
+                {currency}{' '}
+                {Number(taxes).toFixed(2)}
+              </strong>
+            </div>
+
+            <div className="receipt-total-row">
+              <span>Shipping</span>
+
+              <strong>
+                {currency}{' '}
+                {Number(shipping).toFixed(2)}
+              </strong>
+            </div>
+
+            <div className="receipt-total-row">
+              <span>Handling</span>
+
+              <strong>
+                {currency}{' '}
+                {Number(handling).toFixed(2)}
+              </strong>
+            </div>
+
+            <div className="receipt-total-row">
+              <span>Discount</span>
+
+              <strong>
+                -{currency}{' '}
+                {Number(discounts).toFixed(2)}
+              </strong>
+            </div>
+
+            <div className="receipt-grand-total">
+              <span>Total</span>
+
+              <strong>
+                {currency}{' '}
+                {Number(grandTotal).toFixed(2)}
+              </strong>
+            </div>
+          </div>
+        </div>
+
+        <div className="receipt-footer">
+          <p className="receipt-thank-you">
+            Thank you for your purchase.
+          </p>
+
+          <p>
+            This invoice was issued by the store.
+          </p>
+
+          <p>
+            Please retain this receipt for your records.
+          </p>
+        </div>
+      </div>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* NORMAL SCREEN ORDER PAGE                                           */}
+      {/* ------------------------------------------------------------------ */}
 
       <div className="order-page-header">
         <div>
@@ -1478,7 +1728,9 @@ function OrderDetail({
               </p>
 
               <h1>
-                Order #{displayOrderNumber}
+                Order #
+                {order.order_number ??
+                  order.id.slice(0, 8)}
               </h1>
 
               <p className="muted">
@@ -1505,15 +1757,15 @@ function OrderDetail({
         </div>
       </div>
 
-      {/* CUSTOMER & ORDER DETAILS */}
+      {/* CUSTOMER DETAILS */}
 
       <section className="panel order-details-panel">
         <div className="panel-head">
           <div>
             <h2>Customer & order details</h2>
+
             <p className="muted">
-              Customer, payment and delivery
-              information.
+              Customer, payment and delivery information.
             </p>
           </div>
 
@@ -1544,6 +1796,7 @@ function OrderDetail({
                 onClick={saveOrder}
               >
                 <Save size={14} />
+
                 {busy
                   ? 'Saving…'
                   : 'Save changes'}
@@ -1554,101 +1807,94 @@ function OrderDetail({
 
         <div className="order-details-grid">
 
-          {/* READ-ONLY */}
+          {/* ORDER NUMBER IS DISPLAY ONLY */}
 
           <OrderField
             label="Order number"
-            value={displayOrderNumber}
-            editing={false}
+            value={
+              order.order_number ??
+              order.id.slice(0, 8)
+            }
             editable={false}
-            onChange={() => undefined}
           />
-
-          {/* EDITABLE */}
 
           <OrderField
             label="Customer email"
             value={form.customer_email}
             editing={editing}
-            editable={true}
             onChange={(v) =>
-              updateField('customer_email', v)
+              updateField(
+                'customer_email',
+                v
+              )
             }
+            editable
           />
 
           <OrderField
             label="First name"
             value={form.customer_first_name}
             editing={editing}
-            editable={true}
             onChange={(v) =>
               updateField(
                 'customer_first_name',
                 v
               )
             }
+            editable
           />
 
           <OrderField
             label="Last name"
             value={form.customer_last_name}
             editing={editing}
-            editable={true}
             onChange={(v) =>
               updateField(
                 'customer_last_name',
                 v
               )
             }
+            editable
           />
 
-          {/* READ-ONLY */}
+          {/* SHIPPING METHOD IS DISPLAY ONLY */}
 
           <OrderField
             label="Shipping method"
             value={order.shipping_method ?? ''}
-            editing={false}
             editable={false}
-            onChange={() => undefined}
           />
+
+          {/* PAYMENT METHOD IS DISPLAY ONLY */}
 
           <OrderField
             label="Payment method"
             value={order.payment_method ?? ''}
-            editing={false}
             editable={false}
-            onChange={() => undefined}
           />
+
+          {/* PAYMENT IP ADDRESS IS DISPLAY ONLY */}
 
           <OrderField
             label="Payment IP address"
             value={order.payment_ip_address ?? ''}
-            editing={false}
             editable={false}
-            onChange={() => undefined}
           />
+
+          {/* PAYMENT STATUS IS DISPLAY ONLY */}
 
           <OrderField
             label="Payment status"
             value={order.financial_status ?? ''}
-            editing={false}
             editable={false}
-            onChange={() => undefined}
           />
 
-          {/* EDITABLE */}
+          {/* FULFILLMENT STATUS IS DISPLAY ONLY */}
 
           <OrderField
             label="Fulfillment status"
-            value={form.fulfillment_status}
-            editing={editing}
-            editable={true}
-            onChange={(v) =>
-              updateField(
-                'fulfillment_status',
-                v
-              )
-            }
+            value={order.fulfillment_status ?? ''}
+            editable={false}
           />
 
         </div>
@@ -1688,6 +1934,7 @@ function OrderDetail({
         <div className="panel-head">
           <div>
             <h2>Order items</h2>
+
             <p className="muted">
               Products included in this order.
             </p>
@@ -1710,8 +1957,7 @@ function OrderDetail({
             <h3>No order items</h3>
 
             <p>
-              Add items to this order using the
-              Add Items action below.
+              Add items to this order using the Add Items action below.
             </p>
           </div>
         ) : (
@@ -1770,7 +2016,7 @@ function OrderDetail({
                     </td>
 
                     <td>
-                      {currencySymbol}{' '}
+                      {currency}{' '}
                       {Number(
                         item.price
                       ).toFixed(2)}
@@ -1789,6 +2035,7 @@ function OrderDetail({
         <div className="panel-head">
           <div>
             <h2>Order summary</h2>
+
             <p className="muted">
               Financial summary for this order.
             </p>
@@ -1799,40 +2046,45 @@ function OrderDetail({
 
           <div>
             <span>Subtotal</span>
+
             <strong>
-              {currencySymbol}{' '}
+              {currency}{' '}
               {Number(subtotal).toFixed(2)}
             </strong>
           </div>
 
           <div>
             <span>Taxes</span>
+
             <strong>
-              {currencySymbol}{' '}
+              {currency}{' '}
               {Number(taxes).toFixed(2)}
             </strong>
           </div>
 
           <div>
             <span>Shipping</span>
+
             <strong>
-              {currencySymbol}{' '}
+              {currency}{' '}
               {Number(shipping).toFixed(2)}
             </strong>
           </div>
 
           <div>
             <span>Handling</span>
+
             <strong>
-              {currencySymbol}{' '}
+              {currency}{' '}
               {Number(handling).toFixed(2)}
             </strong>
           </div>
 
           <div>
             <span>Discounts</span>
+
             <strong>
-              -{currencySymbol}{' '}
+              -{currency}{' '}
               {Number(discounts).toFixed(2)}
             </strong>
           </div>
@@ -1841,7 +2093,7 @@ function OrderDetail({
             <span>Grand Total</span>
 
             <strong>
-              {currencySymbol}{' '}
+              {currency}{' '}
               {Number(grandTotal).toFixed(2)}
             </strong>
           </div>
@@ -1923,7 +2175,7 @@ function OrderDetail({
         </div>
       </section>
 
-      {/* PRINT BUTTON */}
+      {/* PRINT */}
 
       <div className="print-order">
         <button
@@ -1941,6 +2193,7 @@ function OrderDetail({
         <div className="panel-head">
           <div>
             <h2>Order updates</h2>
+
             <p className="muted">
               Activity history for this order.
             </p>
@@ -1982,249 +2235,6 @@ function OrderDetail({
 
         </div>
       </section>
-
-      {/* ------------------------------------------------------------------ */}
-      {/* PRINT RECEIPT                                                       */}
-      {/* ------------------------------------------------------------------ */}
-
-      <div className="print-receipt">
-
-        <div className="receipt-header">
-          <div className="receipt-brand">
-            <div className="receipt-logo">S</div>
-
-            <div>
-              <h1>Sprintiverse</h1>
-              <p>Order Receipt</p>
-            </div>
-          </div>
-
-          <div className="receipt-order-meta">
-            <strong>ORDER #{displayOrderNumber}</strong>
-
-            <span>
-              {order.ordered_at
-                ? new Date(
-                    order.ordered_at
-                  ).toLocaleDateString()
-                : ''}
-            </span>
-          </div>
-        </div>
-
-        <div className="receipt-divider" />
-
-        <div className="receipt-info-grid">
-
-          <div>
-            <span className="receipt-label">
-              BILL TO
-            </span>
-
-            <strong>
-              {[
-                order.customer_first_name,
-                order.customer_last_name
-              ]
-                .filter(Boolean)
-                .join(' ') || 'Customer'}
-            </strong>
-
-            {order.customer_email && (
-              <span>{order.customer_email}</span>
-            )}
-
-            <div className="receipt-address">
-              {formatAddress(
-                order.billing_address
-              )}
-            </div>
-          </div>
-
-          <div>
-            <span className="receipt-label">
-              SHIP TO
-            </span>
-
-            <strong>
-              {[
-                order.customer_first_name,
-                order.customer_last_name
-              ]
-                .filter(Boolean)
-                .join(' ') || 'Customer'}
-            </strong>
-
-            <div className="receipt-address">
-              {formatAddress(
-                order.shipping_address
-              )}
-            </div>
-          </div>
-
-          <div>
-            <span className="receipt-label">
-              PAYMENT
-            </span>
-
-            <span>
-              {order.payment_method ??
-                '—'}
-            </span>
-
-            <span>
-              Status:{' '}
-              {order.financial_status ??
-                'Pending'}
-            </span>
-          </div>
-
-          <div>
-            <span className="receipt-label">
-              SHIPPING
-            </span>
-
-            <span>
-              {order.shipping_method ??
-                '—'}
-            </span>
-
-            <span>
-              Fulfillment:{' '}
-              {order.fulfillment_status ??
-                'Unfulfilled'}
-            </span>
-          </div>
-
-        </div>
-
-        <div className="receipt-items">
-
-          <div className="receipt-items-head">
-            <span>ITEM</span>
-            <span>QTY</span>
-            <span>PRICE</span>
-            <span>TOTAL</span>
-          </div>
-
-          {items.map((item) => (
-            <div
-              className="receipt-item"
-              key={item.id}
-            >
-              <div>
-                <strong>
-                  {item.product_title}
-                </strong>
-
-                {item.product_sku &&
-                  item.product_sku !== '—' && (
-                    <small>
-                      SKU: {item.product_sku}
-                    </small>
-                  )}
-              </div>
-
-              <span>{item.quantity}</span>
-
-              <span>
-                {currencySymbol}{' '}
-                {Number(
-                  item.price
-                ).toFixed(2)}
-              </span>
-
-              <strong>
-                {currencySymbol}{' '}
-                {(
-                  Number(item.price) *
-                  Number(item.quantity)
-                ).toFixed(2)}
-              </strong>
-            </div>
-          ))}
-
-        </div>
-
-        <div className="receipt-bottom">
-
-          <div className="receipt-thanks">
-            <strong>Thank you for your order.</strong>
-            <span>
-              This receipt was generated by Sprintiverse.
-            </span>
-          </div>
-
-          <div className="receipt-totals">
-
-            <div>
-              <span>Subtotal</span>
-              <strong>
-                {currencySymbol}{' '}
-                {Number(subtotal).toFixed(2)}
-              </strong>
-            </div>
-
-            <div>
-              <span>Taxes</span>
-              <strong>
-                {currencySymbol}{' '}
-                {Number(taxes).toFixed(2)}
-              </strong>
-            </div>
-
-            <div>
-              <span>Shipping</span>
-              <strong>
-                {currencySymbol}{' '}
-                {Number(shipping).toFixed(2)}
-              </strong>
-            </div>
-
-            {handling > 0 && (
-              <div>
-                <span>Handling</span>
-                <strong>
-                  {currencySymbol}{' '}
-                  {Number(handling).toFixed(2)}
-                </strong>
-              </div>
-            )}
-
-            {discounts > 0 && (
-              <div>
-                <span>Discount</span>
-                <strong>
-                  -{currencySymbol}{' '}
-                  {Number(discounts).toFixed(2)}
-                </strong>
-              </div>
-            )}
-
-            <div className="receipt-grand-total">
-              <span>Total</span>
-
-              <strong>
-                {currencySymbol}{' '}
-                {Number(grandTotal).toFixed(2)}
-              </strong>
-            </div>
-
-          </div>
-
-        </div>
-
-        <div className="receipt-footer">
-          <span>
-            Order #{displayOrderNumber}
-          </span>
-
-          <span>
-            {order.customer_email ?? ''}
-          </span>
-        </div>
-
-      </div>
     </div>
   );
 }
@@ -2232,27 +2242,23 @@ function OrderDetail({
 function OrderField({
   label,
   value,
-  editing,
-  editable,
-  onChange
+  editing = false,
+  onChange,
+  editable = false
 }: {
   label: string;
   value: string;
-  editing: boolean;
-  editable: boolean;
-  onChange: (value: string) => void;
+  editing?: boolean;
+  onChange?: (value: string) => void;
+  editable?: boolean;
 }) {
   return (
-    <div
-      className={`detail-field ${
-        !editable ? 'readonly-field' : ''
-      }`}
-    >
+    <div className="detail-field">
       <span className="field-label">
         {label}
       </span>
 
-      {editing && editable ? (
+      {editable && editing && onChange ? (
         <input
           value={value}
           onChange={(e) =>
@@ -2291,8 +2297,7 @@ function AddressField({
           onChange={(e) =>
             onChange(e.target.value)
           }
-          rows={10}
-          className="address-editor"
+          rows={7}
         />
       ) : (
         <pre className="address-value">
@@ -2535,9 +2540,11 @@ function Rules({
     const c = r.conditions?.[0] ?? {};
 
     setField(c.field ?? 'quantity');
+
     setOperator(
       c.operator ?? 'greater_than'
     );
+
     setValue(String(c.value ?? ''));
 
     setFolder(
@@ -2650,8 +2657,7 @@ function Rules({
           <h1>Rule builder</h1>
 
           <p className="muted">
-            Route orders automatically using
-            conditions and actions.
+            Route orders automatically using conditions and actions.
           </p>
         </div>
 
@@ -2678,8 +2684,7 @@ function Rules({
               </h2>
 
               <p className="muted">
-                Start with one trigger, one
-                condition and one action.
+                Start with one trigger, one condition and one action.
               </p>
             </div>
 
@@ -2864,8 +2869,7 @@ function Rules({
             <h3>No rules yet</h3>
 
             <p>
-              Create your first workflow to
-              automatically route orders.
+              Create your first workflow to automatically route orders.
             </p>
           </div>
         ) : (
@@ -2926,6 +2930,7 @@ function Rules({
                   }
                 >
                   <Power size={13} />
+
                   {r.enabled
                     ? 'On'
                     : 'Off'}
@@ -2969,8 +2974,7 @@ const Integrations = () => (
       <h2>Shopify</h2>
 
       <p>
-        Import orders, receive webhooks and
-        run automation rules.
+        Import orders, receive webhooks and run automation rules.
       </p>
 
       <button
@@ -3081,8 +3085,7 @@ function Billing({
         <CircleHelp size={16} />
 
         <span>
-          Razorpay will power subscription
-          checkout.
+          Razorpay will power subscription checkout.
         </span>
       </div>
 
