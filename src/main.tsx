@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createClient, type User } from '@supabase/supabase-js';
 import {
   ArrowLeft,
   ArrowRight,
+  Bell,
   Check,
   ChevronRight,
   CircleHelp,
@@ -13,7 +14,7 @@ import {
   LogOut,
   Plug,
   Printer,
-  Settings,
+  Settings as SettingsIcon,
   ShoppingCart,
   SlidersHorizontal,
   Sparkles,
@@ -28,7 +29,19 @@ import {
   Pencil,
   Save,
   X,
-  Clock3
+  Clock3,
+  UserCircle,
+  Building2,
+  Palette,
+  Shield,
+  KeyRound,
+  CheckCircle2,
+  ChevronDown,
+  Store,
+  CreditCard,
+  Mail,
+  Lock,
+  Monitor
 } from 'lucide-react';
 import './styles.css';
 
@@ -217,7 +230,9 @@ const Config = () => (
   <Center>
     <div className="auth-card">
       <div className="logo">S</div>
+
       <h1>Backend configuration needed</h1>
+
       <p>
         Add <code>VITE_SUPABASE_URL</code> and{' '}
         <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> to your environment.
@@ -284,12 +299,34 @@ function Auth() {
       <div className="auth-brand">
         <div className="logo large">S</div>
 
+        <div className="auth-kicker">
+          <Sparkles size={14} />
+          Sprintiverse Automation
+        </div>
+
         <h1>Automate your order operations.</h1>
 
         <p>
           Route orders, build rules, and keep fulfillment moving without
           repetitive manual work.
         </p>
+
+        <div className="auth-benefits">
+          <div>
+            <CheckCircle2 size={16} />
+            Centralized order operations
+          </div>
+
+          <div>
+            <CheckCircle2 size={16} />
+            Smart workflow automation
+          </div>
+
+          <div>
+            <CheckCircle2 size={16} />
+            Built for growing stores
+          </div>
+        </div>
       </div>
 
       <div className="auth-card wide">
@@ -323,7 +360,6 @@ function Auth() {
           {mode === 'signup' && (
             <label>
               Your name
-
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -335,7 +371,6 @@ function Auth() {
 
           <label>
             Email
-
             <input
               type="email"
               value={email}
@@ -347,7 +382,6 @@ function Auth() {
 
           <label>
             Password
-
             <input
               type="password"
               value={pass}
@@ -443,7 +477,9 @@ function Onboard({
           <strong>Sprintiverse</strong>
         </div>
 
-        <span>Step {step} of 2</span>
+        <span className="step-progress">
+          Step {step} of 2
+        </span>
       </div>
 
       <div className="onboard-card">
@@ -461,7 +497,6 @@ function Onboard({
 
             <label>
               Your name
-
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -471,7 +506,6 @@ function Onboard({
 
             <label>
               Store / business name
-
               <input
                 value={store}
                 onChange={(e) => setStore(e.target.value)}
@@ -482,7 +516,6 @@ function Onboard({
 
             <label>
               Email
-
               <input value={user.email ?? ''} disabled />
             </label>
 
@@ -521,7 +554,6 @@ function Onboard({
 
             <div className="setup-note">
               <Check size={17} />
-
               <span>
                 Your 1-day free trial starts when setup finishes.
               </span>
@@ -530,7 +562,10 @@ function Onboard({
             {err && <div className="alert error">{err}</div>}
 
             <div className="button-row">
-              <button className="secondary" onClick={() => setStep(1)}>
+              <button
+                className="secondary"
+                onClick={() => setStep(1)}
+              >
                 Back
               </button>
 
@@ -567,12 +602,14 @@ function Dashboard({
   const [upgrade, setUpgrade] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [profileMenu, setProfileMenu] = useState(false);
 
   const days = sub?.trial_ends_at
     ? Math.max(
         0,
         Math.ceil(
-          (new Date(sub.trial_ends_at).getTime() - Date.now()) / 86400000
+          (new Date(sub.trial_ends_at).getTime() - Date.now()) /
+            86400000
         )
       )
     : 0;
@@ -599,94 +636,201 @@ function Dashboard({
     setPage('orders');
   }
 
+  function navigate(id: string) {
+    setPage(id);
+    setUpgrade(false);
+    setSelectedOrderId(null);
+    setProfileMenu(false);
+  }
+
+  const initials = (
+    user.user_metadata?.full_name ??
+    user.email ??
+    'U'
+  )[0].toUpperCase();
+
   return (
     <div className="app">
       <aside className="sidebar">
-        <div className="brand">
-          <span className="logo">S</span>
-          <strong>Sprintiverse</strong>
+        <div className="sidebar-brand">
+          <div className="brand-logo">
+            <span>S</span>
+          </div>
+
+          <div>
+            <strong>Sprintiverse</strong>
+            <small>ORDER AUTOMATION</small>
+          </div>
         </div>
 
         <div className="workspace-chip">
-          <span>{ws.name[0]?.toUpperCase()}</span>
+          <span className="workspace-avatar">
+            {ws.name[0]?.toUpperCase()}
+          </span>
 
           <div>
             <strong>{ws.name}</strong>
             <small>Workspace</small>
           </div>
+
+          <ChevronDown size={15} />
+        </div>
+
+        <div className="sidebar-section-label">
+          WORKSPACE
         </div>
 
         <nav>
           {nav.map(([id, label, I]) => (
             <button
               className={page === id ? 'active' : ''}
-              onClick={() => {
-                setPage(id);
-                setUpgrade(false);
-                setSelectedOrderId(null);
-              }}
+              onClick={() => navigate(id)}
               key={id}
             >
-              <I size={17} />
-              {label}
+              <span className="nav-icon">
+                <I size={17} />
+              </span>
+
+              <span>{label}</span>
+
+              {id === 'orders' && (
+                <span className="nav-arrow">
+                  <ChevronRight size={14} />
+                </span>
+              )}
             </button>
           ))}
         </nav>
 
-        <div className="sidebar-bottom">
-          <button
-            onClick={() => {
-              setPage('settings');
-              setSelectedOrderId(null);
-            }}
-          >
-            <Settings size={17} />
-            Settings
-          </button>
+        <div className="sidebar-spacer" />
 
-          <button
-            onClick={() => {
-              setPage('billing');
-              setSelectedOrderId(null);
-            }}
-          >
+        <div className="sidebar-section-label">
+          ACCOUNT
+        </div>
+
+        <button
+          className={`sidebar-settings ${
+            page === 'settings' ? 'active' : ''
+          }`}
+          onClick={() => navigate('settings')}
+        >
+          <span className="nav-icon">
+            <SettingsIcon size={17} />
+          </span>
+          Settings
+        </button>
+
+        <button
+          className={`sidebar-settings ${
+            page === 'billing' ? 'active' : ''
+          }`}
+          onClick={() => navigate('billing')}
+        >
+          <span className="nav-icon">
             <Zap size={17} />
-            Billing
-          </button>
+          </span>
+          Billing
+        </button>
 
-          <button onClick={out}>
-            <LogOut size={17} />
-            Sign out
-          </button>
+        <div className="sidebar-footer">
+          <span>© {new Date().getFullYear()} Sprintiverse</span>
+          <span>v1.0</span>
         </div>
       </aside>
 
       <main className="main">
         <div className="topbar">
           <div className="search">
-            <Search size={16} />
+            <Search size={17} />
 
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search order ID"
             />
+
+            <kbd>⌘ K</kbd>
           </div>
 
-          {days > 0 && (
-            <div className="trial-banner">
-              <span>
-                Your {days} day free trial is expiring soon
-              </span>
+          <div className="topbar-right">
+            {days > 0 && (
+              <div className="trial-banner">
+                <span className="trial-dot" />
+                <span>
+                  Your {days} day free trial is expiring soon
+                </span>
 
-              <button onClick={() => setUpgrade(true)}>
-                Upgrade your plan
+                <button onClick={() => setUpgrade(true)}>
+                  Upgrade your plan
+                </button>
+              </div>
+            )}
+
+            <button className="notification-button">
+              <Bell size={17} />
+              <span />
+            </button>
+
+            <div className="profile-wrapper">
+              <button
+                className="profile-button"
+                onClick={() => setProfileMenu((v) => !v)}
+              >
+                <span className="user-avatar">
+                  {initials}
+                </span>
+
+                <span className="profile-copy">
+                  <strong>
+                    {user.user_metadata?.full_name ??
+                      'Account'}
+                  </strong>
+                  <small>
+                    {user.email ?? 'User'}
+                  </small>
+                </span>
+
+                <ChevronDown size={15} />
               </button>
-            </div>
-          )}
 
-          <div className="user-avatar">
-            {(user.user_metadata?.full_name ?? user.email ?? 'U')[0].toUpperCase()}
+              {profileMenu && (
+                <div className="profile-menu">
+                  <div className="profile-menu-head">
+                    <span className="user-avatar large-avatar">
+                      {initials}
+                    </span>
+
+                    <div>
+                      <strong>
+                        {user.user_metadata?.full_name ??
+                          'Account'}
+                      </strong>
+                      <span>
+                        {user.email ?? ''}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setProfileMenu(false);
+                      setPage('settings');
+                    }}
+                  >
+                    <SettingsIcon size={15} />
+                    Settings
+                  </button>
+
+                  <button
+                    className="profile-signout"
+                    onClick={out}
+                  >
+                    <LogOut size={15} />
+                    Sign out
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -694,6 +838,12 @@ function Dashboard({
           <Billing close={() => setUpgrade(false)} />
         ) : page === 'billing' ? (
           <Billing />
+        ) : page === 'settings' ? (
+          <SettingsPage
+            user={user}
+            ws={ws}
+            refresh={refresh}
+          />
         ) : page === 'folders' ? (
           <Folders
             folders={folders}
@@ -717,7 +867,6 @@ function Dashboard({
           <OrderDetail
             orderId={selectedOrderId}
             workspaceId={ws.id}
-            workspaceName={ws.name}
             folders={folders}
             back={goToOrders}
           />
@@ -746,7 +895,10 @@ function Overview({
     <div className="content">
       <header>
         <div>
-          <p className="eyebrow">WORKSPACE</p>
+          <div className="page-kicker">
+            <span className="kicker-dot" />
+            WORKSPACE
+          </div>
 
           <h1>{ws.name}</h1>
 
@@ -756,31 +908,48 @@ function Overview({
         </div>
 
         <button className="primary">
+          <Plus size={15} />
           Create rule
           <ArrowRight size={15} />
         </button>
       </header>
 
       <section className="stats">
-        <div className="card">
+        <div className="card stat-card stat-indigo">
+          <div className="stat-icon">
+            <ShoppingCart size={18} />
+          </div>
+
           <span>Orders today</span>
           <strong>0</strong>
           <small>Waiting for your store</small>
         </div>
 
-        <div className="card">
+        <div className="card stat-card stat-teal">
+          <div className="stat-icon">
+            <Zap size={18} />
+          </div>
+
           <span>Automated</span>
           <strong>0</strong>
           <small>0% automation rate</small>
         </div>
 
-        <div className="card">
+        <div className="card stat-card stat-orange">
+          <div className="stat-icon">
+            <Clock3 size={18} />
+          </div>
+
           <span>Pending</span>
           <strong>0</strong>
           <small>No pending actions</small>
         </div>
 
-        <div className="card">
+        <div className="card stat-card stat-purple">
+          <div className="stat-icon">
+            <Folder size={18} />
+          </div>
+
           <span>Folders</span>
           <strong>{folders.length}</strong>
           <small>
@@ -791,23 +960,37 @@ function Overview({
         </div>
       </section>
 
+      <div className="dashboard-section-title">
+        <div>
+          <h2>Workspace activity</h2>
+          <p>Monitor your order automation workflow.</p>
+        </div>
+
+        <span className="live-badge">
+          <span />
+          Live
+        </span>
+      </div>
+
       <div className="grid">
-        <div className="panel">
+        <div className="panel activity-panel">
           <div className="panel-head">
             <div>
               <h2>Automation activity</h2>
-
               <p className="muted">
                 Recent automation runs will appear here.
               </p>
             </div>
 
-            <span className="status">Ready</span>
+            <span className="status">
+              <CheckCircle2 size={13} />
+              Ready
+            </span>
           </div>
 
           <div className="empty">
-            <div className="empty-icon">
-              <Zap size={18} />
+            <div className="empty-icon gradient-icon">
+              <Zap size={19} />
             </div>
 
             <h3>No automation activity yet</h3>
@@ -815,6 +998,11 @@ function Overview({
             <p>
               Connect a store and create a rule to start automating.
             </p>
+
+            <button className="secondary empty-action">
+              Create your first rule
+              <ArrowRight size={14} />
+            </button>
           </div>
         </div>
 
@@ -822,24 +1010,501 @@ function Overview({
           <div className="panel-head">
             <div>
               <h2>Folders</h2>
-
               <p className="muted">
                 Your default order workflow.
               </p>
             </div>
+
+            <Folder size={18} className="panel-head-icon" />
           </div>
 
           <div className="folder-list">
             {folders.map((f) => (
               <div key={f.id}>
-                <Folder size={15} />
+                <span className="folder-list-icon">
+                  <Folder size={15} />
+                </span>
+
                 <span>{f.name}</span>
+
                 <ChevronRight size={14} />
               </div>
             ))}
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function SettingsPage({
+  user,
+  ws,
+  refresh
+}: {
+  user: User;
+  ws: WS;
+  refresh: () => Promise<void>;
+}) {
+  const [section, setSection] = useState('profile');
+  const [fullName, setFullName] = useState(
+    String(user.user_metadata?.full_name ?? '')
+  );
+  const [workspaceName, setWorkspaceName] = useState(ws.name);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+
+  async function saveProfile() {
+    if (!sb) return;
+
+    setSaving(true);
+    setMessage('');
+
+    const authUpdate = await sb.auth.updateUser({
+      data: {
+        full_name: fullName.trim()
+      }
+    });
+
+    if (authUpdate.error) {
+      setMessage(authUpdate.error.message);
+      setSaving(false);
+      return;
+    }
+
+    const profileUpdate = await sb
+      .from('profiles')
+      .upsert({
+        id: user.id,
+        full_name: fullName.trim()
+      });
+
+    if (profileUpdate.error) {
+      setMessage(profileUpdate.error.message);
+      setSaving(false);
+      return;
+    }
+
+    setMessage('Profile settings saved successfully.');
+    setSaving(false);
+  }
+
+  async function saveWorkspace() {
+    if (!sb || !workspaceName.trim()) return;
+
+    setSaving(true);
+    setMessage('');
+
+    const { error } = await sb
+      .from('workspaces')
+      .update({
+        name: workspaceName.trim()
+      })
+      .eq('id', ws.id);
+
+    if (error) {
+      setMessage(error.message);
+      setSaving(false);
+      return;
+    }
+
+    setMessage('Workspace settings saved successfully.');
+    setSaving(false);
+    await refresh();
+  }
+
+  const sections = [
+    {
+      id: 'profile',
+      label: 'Profile',
+      description: 'Your personal information',
+      icon: UserCircle
+    },
+    {
+      id: 'workspace',
+      label: 'Workspace',
+      description: 'Workspace identity and details',
+      icon: Building2
+    },
+    {
+      id: 'appearance',
+      label: 'Appearance',
+      description: 'Customize your workspace',
+      icon: Palette
+    },
+    {
+      id: 'notifications',
+      label: 'Notifications',
+      description: 'Control alerts and updates',
+      icon: Bell
+    },
+    {
+      id: 'security',
+      label: 'Security',
+      description: 'Password and account security',
+      icon: Shield
+    }
+  ];
+
+  return (
+    <div className="content settings-page">
+      <header>
+        <div>
+          <div className="page-kicker">
+            <span className="kicker-dot" />
+            ACCOUNT
+          </div>
+
+          <h1>Settings</h1>
+
+          <p className="muted">
+            Manage your profile, workspace and account preferences.
+          </p>
+        </div>
+      </header>
+
+      <div className="settings-layout">
+        <aside className="settings-nav">
+          <div className="settings-nav-title">
+            Settings
+          </div>
+
+          {sections.map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <button
+                key={item.id}
+                className={section === item.id ? 'selected' : ''}
+                onClick={() => {
+                  setSection(item.id);
+                  setMessage('');
+                }}
+              >
+                <span className="settings-nav-icon">
+                  <Icon size={17} />
+                </span>
+
+                <span>
+                  <strong>{item.label}</strong>
+                  <small>{item.description}</small>
+                </span>
+
+                <ChevronRight size={14} />
+              </button>
+            );
+          })}
+        </aside>
+
+        <div className="settings-content">
+          {section === 'profile' && (
+            <section className="settings-panel">
+              <div className="settings-panel-header">
+                <div className="settings-icon blue">
+                  <UserCircle size={20} />
+                </div>
+
+                <div>
+                  <h2>Profile</h2>
+                  <p>
+                    Update the information associated with your account.
+                  </p>
+                </div>
+              </div>
+
+              <div className="settings-form">
+                <label>
+                  Full name
+                  <input
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Your full name"
+                  />
+                </label>
+
+                <label>
+                  Email address
+                  <input
+                    value={user.email ?? ''}
+                    disabled
+                  />
+                  <small className="field-help">
+                    Your authentication email is managed by Supabase.
+                  </small>
+                </label>
+              </div>
+
+              {message && (
+                <div className="settings-message">
+                  <CheckCircle2 size={15} />
+                  {message}
+                </div>
+              )}
+
+              <div className="settings-footer">
+                <button
+                  className="primary"
+                  disabled={saving}
+                  onClick={saveProfile}
+                >
+                  <Save size={14} />
+                  {saving ? 'Saving…' : 'Save changes'}
+                </button>
+              </div>
+            </section>
+          )}
+
+          {section === 'workspace' && (
+            <section className="settings-panel">
+              <div className="settings-panel-header">
+                <div className="settings-icon purple">
+                  <Building2 size={20} />
+                </div>
+
+                <div>
+                  <h2>Workspace</h2>
+                  <p>
+                    Manage the identity of your Sprintiverse workspace.
+                  </p>
+                </div>
+              </div>
+
+              <div className="settings-form">
+                <label>
+                  Workspace name
+                  <input
+                    value={workspaceName}
+                    onChange={(e) =>
+                      setWorkspaceName(e.target.value)
+                    }
+                  />
+                </label>
+
+                <label>
+                  Workspace ID
+                  <input
+                    value={ws.id}
+                    disabled
+                  />
+                  <small className="field-help">
+                    This identifier is permanent and cannot be changed.
+                  </small>
+                </label>
+              </div>
+
+              {message && (
+                <div className="settings-message">
+                  <CheckCircle2 size={15} />
+                  {message}
+                </div>
+              )}
+
+              <div className="settings-footer">
+                <button
+                  className="primary"
+                  disabled={saving || !workspaceName.trim()}
+                  onClick={saveWorkspace}
+                >
+                  <Save size={14} />
+                  {saving ? 'Saving…' : 'Save workspace'}
+                </button>
+              </div>
+            </section>
+          )}
+
+          {section === 'appearance' && (
+            <section className="settings-panel">
+              <div className="settings-panel-header">
+                <div className="settings-icon pink">
+                  <Palette size={20} />
+                </div>
+
+                <div>
+                  <h2>Appearance</h2>
+                  <p>
+                    Customize how Sprintiverse looks on your screen.
+                  </p>
+                </div>
+              </div>
+
+              <div className="appearance-options">
+                <div className="appearance-option selected">
+                  <div className="appearance-preview light-preview">
+                    <div />
+                    <div />
+                    <div />
+                  </div>
+
+                  <div>
+                    <strong>Light</strong>
+                    <span>Clean and bright interface</span>
+                  </div>
+
+                  <CheckCircle2 size={17} />
+                </div>
+
+                <div className="appearance-option">
+                  <div className="appearance-preview system-preview">
+                    <div />
+                    <div />
+                    <div />
+                  </div>
+
+                  <div>
+                    <strong>System</strong>
+                    <span>Follow your device preference</span>
+                  </div>
+
+                  <Monitor size={17} />
+                </div>
+              </div>
+
+              <div className="settings-note">
+                <Palette size={16} />
+                <div>
+                  <strong>Premium workspace theme</strong>
+                  <span>
+                    Sprintiverse uses a soft indigo and teal visual system
+                    designed for long work sessions.
+                  </span>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {section === 'notifications' && (
+            <section className="settings-panel">
+              <div className="settings-panel-header">
+                <div className="settings-icon orange">
+                  <Bell size={20} />
+                </div>
+
+                <div>
+                  <h2>Notifications</h2>
+                  <p>
+                    Choose which workspace notifications you receive.
+                  </p>
+                </div>
+              </div>
+
+              <div className="toggle-list">
+                <ToggleSetting
+                  title="Order notifications"
+                  description="Receive updates when orders are imported or changed."
+                  enabled
+                />
+
+                <ToggleSetting
+                  title="Automation alerts"
+                  description="Get notified when an automation rule requires attention."
+                  enabled
+                />
+
+                <ToggleSetting
+                  title="Billing reminders"
+                  description="Receive important subscription and billing updates."
+                  enabled
+                />
+
+                <ToggleSetting
+                  title="Product updates"
+                  description="Hear about new Sprintiverse features and improvements."
+                  enabled={false}
+                />
+              </div>
+            </section>
+          )}
+
+          {section === 'security' && (
+            <section className="settings-panel">
+              <div className="settings-panel-header">
+                <div className="settings-icon green">
+                  <Shield size={20} />
+                </div>
+
+                <div>
+                  <h2>Security</h2>
+                  <p>
+                    Protect your Sprintiverse account and workspace.
+                  </p>
+                </div>
+              </div>
+
+              <div className="security-card">
+                <div className="security-card-icon">
+                  <KeyRound size={18} />
+                </div>
+
+                <div>
+                  <strong>Password</strong>
+                  <span>
+                    Your account password is managed securely through
+                    Supabase Authentication.
+                  </span>
+                </div>
+
+                <button
+                  className="secondary"
+                  onClick={() =>
+                    alert(
+                      'Password reset flow will be connected next.'
+                    )
+                  }
+                >
+                  Change password
+                </button>
+              </div>
+
+              <div className="security-card">
+                <div className="security-card-icon">
+                  <Lock size={18} />
+                </div>
+
+                <div>
+                  <strong>Authentication</strong>
+                  <span>
+                    Your account is protected by Supabase Auth.
+                  </span>
+                </div>
+
+                <span className="security-status">
+                  <CheckCircle2 size={14} />
+                  Protected
+                </span>
+              </div>
+            </section>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ToggleSetting({
+  title,
+  description,
+  enabled
+}: {
+  title: string;
+  description: string;
+  enabled: boolean;
+}) {
+  const [on, setOn] = useState(enabled);
+
+  return (
+    <div className="toggle-setting">
+      <div>
+        <strong>{title}</strong>
+        <span>{description}</span>
+      </div>
+
+      <button
+        className={`toggle ${on ? 'on' : ''}`}
+        onClick={() => setOn((v) => !v)}
+        aria-label={`Toggle ${title}`}
+      >
+        <span />
+      </button>
     </div>
   );
 }
@@ -918,7 +1583,10 @@ function Folders({
     <div className="content">
       <header>
         <div>
-          <p className="eyebrow">WORKFLOW</p>
+          <div className="page-kicker">
+            <span className="kicker-dot" />
+            WORKFLOW
+          </div>
 
           <h1>Folders</h1>
 
@@ -949,12 +1617,16 @@ function Folders({
         {folders.map((f) => (
           <div className="folder-row" key={f.id}>
             <div>
-              <Folder size={17} />
+              <span className="folder-row-icon">
+                <Folder size={17} />
+              </span>
+
               <strong>{f.name}</strong>
             </div>
 
             <div className="row-actions">
               <button onClick={() => rename(f)}>
+                <Pencil size={13} />
                 Rename
               </button>
 
@@ -1026,7 +1698,10 @@ function Orders({
     <div className="content">
       <header>
         <div>
-          <p className="eyebrow">ORDER MANAGEMENT</p>
+          <div className="page-kicker">
+            <span className="kicker-dot" />
+            ORDER MANAGEMENT
+          </div>
 
           <h1>Orders</h1>
 
@@ -1133,20 +1808,14 @@ function Orders({
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* ORDER DETAIL                                                               */
-/* -------------------------------------------------------------------------- */
-
 function OrderDetail({
   orderId,
   workspaceId,
-  workspaceName,
   folders,
   back
 }: {
   orderId: string;
   workspaceId: string;
-  workspaceName: string;
   folders: F[];
   back: () => void;
 }) {
@@ -1158,9 +1827,15 @@ function OrderDetail({
   const [busy, setBusy] = useState(false);
 
   const [form, setForm] = useState({
+    order_number: '',
     customer_email: '',
     customer_first_name: '',
     customer_last_name: '',
+    shipping_method: '',
+    payment_method: '',
+    payment_ip_address: '',
+    financial_status: '',
+    fulfillment_status: '',
     shipping_address: '',
     billing_address: ''
   });
@@ -1193,11 +1868,22 @@ function OrderDetail({
     setOrder(current);
 
     setForm({
+      order_number: current.order_number ?? '',
       customer_email: current.customer_email ?? '',
       customer_first_name:
         current.customer_first_name ?? '',
       customer_last_name:
         current.customer_last_name ?? '',
+      shipping_method:
+        current.shipping_method ?? '',
+      payment_method:
+        current.payment_method ?? '',
+      payment_ip_address:
+        current.payment_ip_address ?? '',
+      financial_status:
+        current.financial_status ?? '',
+      fulfillment_status:
+        current.fulfillment_status ?? '',
       shipping_address: formatAddress(
         current.shipping_address
       ),
@@ -1247,13 +1933,26 @@ function OrderDetail({
     const { data, error } = await sb
       .from('orders')
       .update({
-        customer_email: form.customer_email,
+        customer_email:
+          form.customer_email,
         customer_first_name:
           form.customer_first_name,
         customer_last_name:
           form.customer_last_name,
-        shipping_address: shippingAddress,
-        billing_address: billingAddress
+        shipping_method:
+          form.shipping_method,
+        payment_method:
+          form.payment_method,
+        payment_ip_address:
+          form.payment_ip_address,
+        financial_status:
+          form.financial_status,
+        fulfillment_status:
+          form.fulfillment_status,
+        shipping_address:
+          shippingAddress,
+        billing_address:
+          billingAddress
       })
       .eq('id', order.id)
       .eq('workspace_id', workspaceId)
@@ -1272,7 +1971,7 @@ function OrderDetail({
       ...current,
       {
         id: crypto.randomUUID(),
-        message: 'Customer details were edited',
+        message: 'Order details were edited',
         created_at: new Date().toISOString()
       }
     ]);
@@ -1447,270 +2146,6 @@ function OrderDetail({
 
   return (
     <div className="content order-detail-page">
-
-      {/* ------------------------------------------------------------------ */}
-      {/* STORE RECEIPT - PRINT ONLY                                         */}
-      {/* ------------------------------------------------------------------ */}
-
-      <div className="store-receipt">
-
-        <div className="receipt-header">
-          <div className="receipt-store">
-            <h2 className="receipt-store-name">
-              {workspaceName}
-            </h2>
-
-            <p className="receipt-store-details">
-              Store / Business
-            </p>
-          </div>
-
-          <div className="receipt-title">
-            <h1>INVOICE</h1>
-
-            <p>
-              Order #
-              {order.order_number ?? order.id.slice(0, 8)}
-            </p>
-
-            <p>
-              {order.ordered_at
-                ? new Date(
-                    order.ordered_at
-                  ).toLocaleDateString()
-                : ''}
-            </p>
-          </div>
-        </div>
-
-        <div className="receipt-info">
-          <div className="receipt-info-block">
-            <h3>Customer</h3>
-
-            <p>
-              {[
-                order.customer_first_name,
-                order.customer_last_name
-              ]
-                .filter(Boolean)
-                .join(' ') || 'Customer'}
-
-              {'\n'}
-
-              {order.customer_email || ''}
-            </p>
-          </div>
-
-          <div className="receipt-info-block">
-            <h3>Order information</h3>
-
-            <div className="receipt-meta">
-              <div className="receipt-meta-row">
-                <span>Order</span>
-
-                <strong>
-                  #{order.order_number ?? order.id.slice(0, 8)}
-                </strong>
-              </div>
-
-              <div className="receipt-meta-row">
-                <span>Date</span>
-
-                <strong>
-                  {order.ordered_at
-                    ? new Date(
-                        order.ordered_at
-                      ).toLocaleDateString()
-                    : '—'}
-                </strong>
-              </div>
-
-              <div className="receipt-meta-row">
-                <span>Payment</span>
-
-                <strong>
-                  {order.payment_method || '—'}
-                </strong>
-              </div>
-
-              <div className="receipt-meta-row">
-                <span>Status</span>
-
-                <strong>
-                  {order.financial_status || '—'}
-                </strong>
-              </div>
-
-              <div className="receipt-meta-row">
-                <span>Shipping</span>
-
-                <strong>
-                  {order.shipping_method || '—'}
-                </strong>
-              </div>
-
-              <div className="receipt-meta-row">
-                <span>Fulfillment</span>
-
-                <strong>
-                  {order.fulfillment_status || 'Unfulfilled'}
-                </strong>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="receipt-addresses">
-          <div className="receipt-address">
-            <h3>Bill To</h3>
-
-            <p>
-              {formatAddress(order.billing_address) || '—'}
-            </p>
-          </div>
-
-          <div className="receipt-address">
-            <h3>Ship To</h3>
-
-            <p>
-              {formatAddress(order.shipping_address) || '—'}
-            </p>
-          </div>
-        </div>
-
-        <div className="receipt-items">
-          <table>
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th>SKU</th>
-                <th>Qty</th>
-                <th>Unit Price</th>
-                <th>Amount</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {items.map((item) => (
-                <tr key={item.id}>
-                  <td>
-                    <div className="receipt-product-title">
-                      {item.product_title}
-                    </div>
-
-                    {item.product_type && (
-                      <div className="receipt-sku">
-                        {item.product_type}
-                      </div>
-                    )}
-                  </td>
-
-                  <td>
-                    {item.product_sku || '—'}
-                  </td>
-
-                  <td>
-                    {item.quantity}
-                  </td>
-
-                  <td>
-                    {currency}{' '}
-                    {Number(
-                      item.price || 0
-                    ).toFixed(2)}
-                  </td>
-
-                  <td>
-                    {currency}{' '}
-                    {(
-                      Number(item.price || 0) *
-                      Number(item.quantity || 0)
-                    ).toFixed(2)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="receipt-bottom">
-          <div className="receipt-totals">
-
-            <div className="receipt-total-row">
-              <span>Subtotal</span>
-
-              <strong>
-                {currency}{' '}
-                {Number(subtotal).toFixed(2)}
-              </strong>
-            </div>
-
-            <div className="receipt-total-row">
-              <span>Tax</span>
-
-              <strong>
-                {currency}{' '}
-                {Number(taxes).toFixed(2)}
-              </strong>
-            </div>
-
-            <div className="receipt-total-row">
-              <span>Shipping</span>
-
-              <strong>
-                {currency}{' '}
-                {Number(shipping).toFixed(2)}
-              </strong>
-            </div>
-
-            <div className="receipt-total-row">
-              <span>Handling</span>
-
-              <strong>
-                {currency}{' '}
-                {Number(handling).toFixed(2)}
-              </strong>
-            </div>
-
-            <div className="receipt-total-row">
-              <span>Discount</span>
-
-              <strong>
-                -{currency}{' '}
-                {Number(discounts).toFixed(2)}
-              </strong>
-            </div>
-
-            <div className="receipt-grand-total">
-              <span>Total</span>
-
-              <strong>
-                {currency}{' '}
-                {Number(grandTotal).toFixed(2)}
-              </strong>
-            </div>
-          </div>
-        </div>
-
-        <div className="receipt-footer">
-          <p className="receipt-thank-you">
-            Thank you for your purchase.
-          </p>
-
-          <p>
-            This invoice was issued by the store.
-          </p>
-
-          <p>
-            Please retain this receipt for your records.
-          </p>
-        </div>
-      </div>
-
-      {/* ------------------------------------------------------------------ */}
-      {/* NORMAL SCREEN ORDER PAGE                                           */}
-      {/* ------------------------------------------------------------------ */}
-
       <div className="order-page-header">
         <div>
           <button
@@ -1723,9 +2158,10 @@ function OrderDetail({
 
           <div className="order-title-row">
             <div>
-              <p className="eyebrow">
+              <div className="page-kicker">
+                <span className="kicker-dot" />
                 ORDER MANAGEMENT
-              </p>
+              </div>
 
               <h1>
                 Order #
@@ -1757,13 +2193,10 @@ function OrderDetail({
         </div>
       </div>
 
-      {/* CUSTOMER DETAILS */}
-
       <section className="panel order-details-panel">
         <div className="panel-head">
           <div>
             <h2>Customer & order details</h2>
-
             <p className="muted">
               Customer, payment and delivery information.
             </p>
@@ -1796,7 +2229,6 @@ function OrderDetail({
                 onClick={saveOrder}
               >
                 <Save size={14} />
-
                 {busy
                   ? 'Saving…'
                   : 'Save changes'}
@@ -1806,16 +2238,11 @@ function OrderDetail({
         </div>
 
         <div className="order-details-grid">
-
-          {/* ORDER NUMBER IS DISPLAY ONLY */}
-
           <OrderField
             label="Order number"
-            value={
-              order.order_number ??
-              order.id.slice(0, 8)
-            }
-            editable={false}
+            value={form.order_number}
+            editing={false}
+            onChange={() => {}}
           />
 
           <OrderField
@@ -1823,12 +2250,8 @@ function OrderDetail({
             value={form.customer_email}
             editing={editing}
             onChange={(v) =>
-              updateField(
-                'customer_email',
-                v
-              )
+              updateField('customer_email', v)
             }
-            editable
           />
 
           <OrderField
@@ -1841,7 +2264,6 @@ function OrderDetail({
                 v
               )
             }
-            editable
           />
 
           <OrderField
@@ -1854,53 +2276,70 @@ function OrderDetail({
                 v
               )
             }
-            editable
           />
-
-          {/* SHIPPING METHOD IS DISPLAY ONLY */}
 
           <OrderField
             label="Shipping method"
-            value={order.shipping_method ?? ''}
-            editable={false}
+            value={form.shipping_method}
+            editing={editing}
+            onChange={(v) =>
+              updateField(
+                'shipping_method',
+                v
+              )
+            }
           />
-
-          {/* PAYMENT METHOD IS DISPLAY ONLY */}
 
           <OrderField
             label="Payment method"
-            value={order.payment_method ?? ''}
-            editable={false}
+            value={form.payment_method}
+            editing={editing}
+            onChange={(v) =>
+              updateField(
+                'payment_method',
+                v
+              )
+            }
           />
-
-          {/* PAYMENT IP ADDRESS IS DISPLAY ONLY */}
 
           <OrderField
             label="Payment IP address"
-            value={order.payment_ip_address ?? ''}
-            editable={false}
+            value={form.payment_ip_address}
+            editing={editing}
+            onChange={(v) =>
+              updateField(
+                'payment_ip_address',
+                v
+              )
+            }
           />
-
-          {/* PAYMENT STATUS IS DISPLAY ONLY */}
 
           <OrderField
             label="Payment status"
-            value={order.financial_status ?? ''}
-            editable={false}
+            value={form.financial_status}
+            editing={editing}
+            onChange={(v) =>
+              updateField(
+                'financial_status',
+                v
+              )
+            }
           />
-
-          {/* FULFILLMENT STATUS IS DISPLAY ONLY */}
 
           <OrderField
             label="Fulfillment status"
-            value={order.fulfillment_status ?? ''}
-            editable={false}
+            value={form.fulfillment_status}
+            editing={editing}
+            onChange={(v) =>
+              updateField(
+                'fulfillment_status',
+                v
+              )
+            }
           />
-
         </div>
 
         <div className="address-grid">
-
           <AddressField
             label="Shipping address"
             value={form.shipping_address}
@@ -1924,17 +2363,13 @@ function OrderDetail({
               )
             }
           />
-
         </div>
       </section>
-
-      {/* ORDER ITEMS */}
 
       <section className="panel order-items-panel">
         <div className="panel-head">
           <div>
             <h2>Order items</h2>
-
             <p className="muted">
               Products included in this order.
             </p>
@@ -1980,7 +2415,10 @@ function OrderDetail({
                     <td>
                       <span className="mono">
                         {item.order_id ??
-                          order.id.slice(0, 8)}
+                          order.id.slice(
+                            0,
+                            8
+                          )}
                       </span>
                     </td>
 
@@ -2029,13 +2467,10 @@ function OrderDetail({
         )}
       </section>
 
-      {/* ORDER SUMMARY */}
-
       <section className="panel order-summary-panel">
         <div className="panel-head">
           <div>
             <h2>Order summary</h2>
-
             <p className="muted">
               Financial summary for this order.
             </p>
@@ -2043,10 +2478,8 @@ function OrderDetail({
         </div>
 
         <div className="summary-list">
-
           <div>
             <span>Subtotal</span>
-
             <strong>
               {currency}{' '}
               {Number(subtotal).toFixed(2)}
@@ -2055,7 +2488,6 @@ function OrderDetail({
 
           <div>
             <span>Taxes</span>
-
             <strong>
               {currency}{' '}
               {Number(taxes).toFixed(2)}
@@ -2064,7 +2496,6 @@ function OrderDetail({
 
           <div>
             <span>Shipping</span>
-
             <strong>
               {currency}{' '}
               {Number(shipping).toFixed(2)}
@@ -2073,7 +2504,6 @@ function OrderDetail({
 
           <div>
             <span>Handling</span>
-
             <strong>
               {currency}{' '}
               {Number(handling).toFixed(2)}
@@ -2082,7 +2512,6 @@ function OrderDetail({
 
           <div>
             <span>Discounts</span>
-
             <strong>
               -{currency}{' '}
               {Number(discounts).toFixed(2)}
@@ -2097,15 +2526,11 @@ function OrderDetail({
               {Number(grandTotal).toFixed(2)}
             </strong>
           </div>
-
         </div>
       </section>
 
-      {/* ACTIONS */}
-
       <section className="order-actions-section">
         <div className="order-actions">
-
           <button
             className="primary"
             onClick={() => setEditing(true)}
@@ -2171,11 +2596,8 @@ function OrderDetail({
             <Trash2 size={14} />
             Delete Order
           </button>
-
         </div>
       </section>
-
-      {/* PRINT */}
 
       <div className="print-order">
         <button
@@ -2187,13 +2609,10 @@ function OrderDetail({
         </button>
       </div>
 
-      {/* ORDER UPDATES */}
-
       <section className="panel order-updates-panel">
         <div className="panel-head">
           <div>
             <h2>Order updates</h2>
-
             <p className="muted">
               Activity history for this order.
             </p>
@@ -2201,7 +2620,6 @@ function OrderDetail({
         </div>
 
         <div className="order-timeline">
-
           {updates.map((update) => (
             <div
               className="timeline-item"
@@ -2232,7 +2650,6 @@ function OrderDetail({
               </div>
             </div>
           ))}
-
         </div>
       </section>
     </div>
@@ -2242,15 +2659,13 @@ function OrderDetail({
 function OrderField({
   label,
   value,
-  editing = false,
-  onChange,
-  editable = false
+  editing,
+  onChange
 }: {
   label: string;
   value: string;
-  editing?: boolean;
-  onChange?: (value: string) => void;
-  editable?: boolean;
+  editing: boolean;
+  onChange: (value: string) => void;
 }) {
   return (
     <div className="detail-field">
@@ -2258,7 +2673,7 @@ function OrderField({
         {label}
       </span>
 
-      {editable && editing && onChange ? (
+      {editing ? (
         <input
           value={value}
           onChange={(e) =>
@@ -2308,10 +2723,6 @@ function AddressField({
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* HELPERS                                                                    */
-/* -------------------------------------------------------------------------- */
-
 function formatAddress(address: any): string {
   if (!address) return '';
 
@@ -2327,6 +2738,13 @@ function formatAddress(address: any): string {
           : JSON.stringify(x)
       )
       .join('\n');
+  }
+
+  if (
+    address.formatted &&
+    typeof address.formatted === 'string'
+  ) {
+    return address.formatted;
   }
 
   const lines = [
@@ -2469,10 +2887,6 @@ function formatDate(value: string) {
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* RULES                                                                      */
-/* -------------------------------------------------------------------------- */
-
 function Rules({
   workspaceId,
   folders
@@ -2540,11 +2954,9 @@ function Rules({
     const c = r.conditions?.[0] ?? {};
 
     setField(c.field ?? 'quantity');
-
     setOperator(
       c.operator ?? 'greater_than'
     );
-
     setValue(String(c.value ?? ''));
 
     setFolder(
@@ -2650,9 +3062,10 @@ function Rules({
     <div className="content">
       <header>
         <div>
-          <p className="eyebrow">
+          <div className="page-kicker">
+            <span className="kicker-dot" />
             AUTOMATION
-          </p>
+          </div>
 
           <h1>Rule builder</h1>
 
@@ -2930,7 +3343,6 @@ function Rules({
                   }
                 >
                   <Power size={13} />
-
                   {r.enabled
                     ? 'On'
                     : 'Off'}
@@ -2941,6 +3353,7 @@ function Rules({
                     edit(r)
                   }
                 >
+                  <Pencil size={13} />
                   Edit
                 </button>
 
@@ -2967,8 +3380,8 @@ const Integrations = () => (
     eyebrow="CONNECTIONS"
   >
     <div className="integration-card">
-      <div className="shopify-placeholder">
-        S
+      <div className="integration-icon">
+        <Store size={22} />
       </div>
 
       <h2>Shopify</h2>
@@ -2976,6 +3389,23 @@ const Integrations = () => (
       <p>
         Import orders, receive webhooks and run automation rules.
       </p>
+
+      <div className="integration-features">
+        <span>
+          <Check size={13} />
+          Order import
+        </span>
+
+        <span>
+          <Check size={13} />
+          Webhooks
+        </span>
+
+        <span>
+          <Check size={13} />
+          Automation
+        </span>
+      </div>
 
       <button
         className="secondary"
@@ -3000,9 +3430,10 @@ function Page({
     <div className="content">
       <header>
         <div>
-          <p className="eyebrow">
+          <div className="page-kicker">
+            <span className="kicker-dot" />
             {eyebrow}
-          </p>
+          </div>
 
           <h1>{title}</h1>
         </div>
@@ -3022,17 +3453,20 @@ function Billing({
     [
       'Starter',
       '$19',
-      '2 seats · 500 orders'
+      '2 seats · 500 orders',
+      'For small teams'
     ],
     [
       'Growth',
       '$49',
-      '5 seats · 2,500 orders'
+      '5 seats · 2,500 orders',
+      'For growing stores'
     ],
     [
       'Pro',
       '$99',
-      '15 seats · 10,000 orders'
+      '15 seats · 10,000 orders',
+      'For high-volume operations'
     ]
   ];
 
@@ -3041,9 +3475,23 @@ function Billing({
       title="Billing"
       eyebrow="ACCOUNT"
     >
+      <div className="billing-intro">
+        <div>
+          <span className="billing-label">
+            CURRENT PLAN
+          </span>
+          <strong>Free Trial</strong>
+        </div>
+
+        <div className="billing-status">
+          <CheckCircle2 size={14} />
+          Trial active
+        </div>
+      </div>
+
       <div className="plans">
         {plans.map(
-          ([n, p, d], i) => (
+          ([n, p, d, subtitle], i) => (
             <div
               className={`plan ${
                 i === 1
@@ -3058,7 +3506,21 @@ function Billing({
                 </span>
               )}
 
+              <div className="plan-icon">
+                {i === 0 ? (
+                  <Package size={18} />
+                ) : i === 1 ? (
+                  <Zap size={18} />
+                ) : (
+                  <CreditCard size={18} />
+                )}
+              </div>
+
               <h2>{n}</h2>
+
+              <p className="plan-subtitle">
+                {subtitle}
+              </p>
 
               <div className="price">
                 {p}
@@ -3075,6 +3537,7 @@ function Billing({
                 }
               >
                 Choose {n}
+                <ArrowRight size={14} />
               </button>
             </div>
           )
@@ -3091,7 +3554,7 @@ function Billing({
 
       {close && (
         <button
-          className="secondary"
+          className="secondary billing-back"
           onClick={close}
         >
           Back
